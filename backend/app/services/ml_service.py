@@ -11,16 +11,17 @@ _model = None
 def _load_model():
     global _model
     if _model is None:
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(
+                f"Model file not found at {MODEL_PATH}. "
+                "Run `python ml/train_model.py` to generate it."
+            )
         _model = joblib.load(MODEL_PATH)
     return _model
 
 
 def predict(data: dict) -> dict:
-    """
-    Run prediction from form inputs.
-    Returns predicted_units, predicted_bill, risk_level, recommendations.
-    Replace model.pkl with the real trained model when ready.
-    """
+    
     model = _load_model()
 
     avg_prev_bill = (
@@ -29,18 +30,20 @@ def predict(data: dict) -> dict:
         + (data.get("prev_bill_3", 0) or 0)
     ) / 3.0
 
+    weather = data.get("weather", {})
+
     features = np.array([[
         data.get("members", 4),
         avg_prev_bill,
         data.get("fan_count", 0),
         data.get("ac_count", 0),
-        data.get("ac_hours_per_day", 0),
+        data.get("ac_hours_per_week", 0) / 7.0,
         data.get("ac_tons", 1.5),
         data.get("fridge_count", 1),
         data.get("washer_hours_per_week", 0),
         data.get("heater_hours_per_week", 0),
-        data.get("other_hours_per_day", 0),
-        data.get("temperature", 30.0),
+        data.get("other_hours_per_week", 0) / 7.0,
+        weather.get("avg_temp", 29.0),
     ]])
 
     predicted_units = float(model.predict(features)[0])
@@ -60,15 +63,16 @@ def predict(data: dict) -> dict:
 
 
 def _appliance_breakdown(data: dict) -> dict:
-    """Estimate monthly kWh per appliance category for the pie chart."""
-    days = 30
-    ac = data.get("ac_count", 0) * data.get("ac_hours_per_day", 0) * data.get("ac_tons", 1.5) * 0.7 * days
-    fans = data.get("fan_count", 0) * 0.06 * 10 * days
-    fridge = data.get("fridge_count", 1) * 0.15 * 24 * days
-    heater = data.get("heater_hours_per_week", 0) / 7 * 1.5 * days
-    washer = data.get("washer_hours_per_week", 0) / 7 * 2.0 * days
-    other = data.get("other_hours_per_day", 2) * 0.3 * days
-    base = data.get("members", 4) * 0.2 * days
+    """Estimate monthly kWh using weekly usage data scaled to 30 days."""
+    # 4.3 weeks per month
+    
+    ac = data.get("ac_count", 0) * (data.get("ac_hours_per_week", 0) / 7) * data.get("ac_tons", 1.5) * 0.7 * 30
+    fans = data.get("fan_count", 0) * 0.06 * 10 * 30
+    fridge = data.get("fridge_count", 1) * 0.15 * 24 * 30
+    heater = (data.get("heater_hours_per_week", 0) * 4.3) * 1.5 
+    washer = (data.get("washer_hours_per_week", 0) * 4.3) * 2.0 
+    other = (data.get("other_hours_per_week", 14) / 7) * 0.3 * 30
+    base = data.get("members", 4) * 0.2 * 30
 
     return {
         "Air Conditioner": round(ac, 1),
@@ -85,92 +89,185 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
     recs = []
 
     ac_count = data.get("ac_count", 0)
-    ac_hours = data.get("ac_hours_per_day", 0)
+    ac_hours = data.get("ac_hours_per_week", 0) / 7.0
     ac_tons = data.get("ac_tons", 1.5)
     fan_count = data.get("fan_count", 0)
     fridge_count = data.get("fridge_count", 0)
     washer_hours = data.get("washer_hours_per_week", 0)
     heater_hours = data.get("heater_hours_per_week", 0)
-    temperature = data.get("temperature", 30.0)
     members = data.get("members", 4)
 
+    # --- AC recommendations ---
     if ac_count > 0 and ac_hours > 6:
         saving = round(ac_count * (ac_hours - 6) * ac_tons * 0.7 * 30, 1)
         recs.append({
-            "title": "Reduce AC usage",
-            "description": f"Your AC runs {ac_hours:.0f} hrs/day. Reducing to 6 hrs could save ~{saving} kWh/month.",
+            "title": "Reduce AC usage hours",
+            "description": (
+                f"Your AC runs {ac_hours:.0f} hrs/day. Reducing to 6 hrs could save "
+                f"~{saving} kWh/month. In Colombo's climate, switching the AC off at "
+                f"night and using a ceiling fan instead can reduce your bill significantly."
+            ),
             "category": "Air Conditioner",
             "saving_kwh": saving,
             "icon": "ac",
         })
 
-    if ac_count > 0 and ac_tons >= 2:
+    if ac_count > 0:
         recs.append({
-            "title": "Consider inverter AC",
-            "description": "Inverter ACs consume 30–40% less electricity than non-inverter units at the same cooling capacity.",
+            "title": "Set AC thermostat to 24°C",
+            "description": (
+                "Each degree below 24°C increases energy use by about 6%. "
+                "Setting your AC to 24°C instead of 18°C can cut AC electricity "
+                "costs by up to 36% — no hardware change needed, just a setting adjustment."
+            ),
             "category": "Air Conditioner",
-            "saving_kwh": round(ac_count * ac_hours * ac_tons * 0.7 * 0.35 * 30, 1),
+            "saving_kwh": round(ac_count * ac_hours * 0.18 * 30, 1),
+            "icon": "temperature",
+        })
+
+    if ac_count > 0 and fan_count > 0:
+        recs.append({
+            "title": "Use fan with AC at higher temperature",
+            "description": (
+                "Running a ceiling fan alongside the AC lets you set the thermostat "
+                "2–3°C higher while feeling equally cool. A fan uses only 60W compared "
+                "to 1,000W+ for an AC — this is one of the most cost-effective habits "
+                "for Sri Lankan households."
+            ),
+            "category": "Air Conditioner",
+            "saving_kwh": round(ac_count * ac_hours * 0.12 * 30, 1),
+            "icon": "fan",
+        })
+
+    if ac_count > 0:
+        recs.append({
+            "title": "Clean AC filters monthly",
+            "description": (
+                "Dirty AC filters force the unit to work harder, increasing electricity "
+                "use by 5–15%. Cleaning the filter takes 10 minutes and costs nothing — "
+                "this is one of the simplest ways to reduce your bill in Sri Lanka's "
+                "dusty urban environment."
+            ),
+            "category": "Air Conditioner",
+            "saving_kwh": round(ac_count * ac_hours * ac_tons * 0.7 * 0.1 * 30, 1),
             "icon": "ac",
         })
 
-    if ac_count > 0 and temperature >= 30:
+    # --- Fridge recommendations ---
+    if fridge_count >= 1:
         recs.append({
-            "title": "Set AC to 24°C",
-            "description": "Each degree above 24°C saves approximately 6% on cooling energy. Set thermostat to 24°C.",
-            "category": "Air Conditioner",
-            "saving_kwh": round(ac_count * ac_hours * 0.15 * 30, 1),
-            "icon": "temperature",
+            "title": "Keep fridge away from heat sources",
+            "description": (
+                "Placing the refrigerator away from direct sunlight, the stove, or "
+                "walls improves efficiency by up to 15%. Also ensure the door seal is "
+                "tight — a loose seal wastes electricity continuously. This is free "
+                "to fix and relevant in Colombo's warm climate."
+            ),
+            "category": "Refrigerator",
+            "saving_kwh": round(fridge_count * 0.15 * 24 * 0.1 * 30, 1),
+            "icon": "fridge",
         })
 
     if fridge_count >= 2:
         recs.append({
-            "title": "Consolidate refrigerators",
-            "description": "Each additional fridge consumes ~72 kWh/month. Consider consolidating to one efficient unit.",
+            "title": "Consider consolidating to one refrigerator",
+            "description": (
+                "Each additional fridge consumes approximately 108 kWh/month under "
+                "the CEB tariff. At the higher tiers, this can add LKR 4,000–8,000 "
+                "to your bill. If a second fridge is not essential, unplugging it "
+                "during low-usage months is an easy saving."
+            ),
             "category": "Refrigerator",
-            "saving_kwh": 72.0,
+            "saving_kwh": 108.0,
             "icon": "fridge",
         })
 
-    if washer_hours > 3:
+    # --- Washing machine ---
+    if washer_hours > 2:
         recs.append({
-            "title": "Wash with cold water",
-            "description": "Cold water washing uses 90% less energy than hot water washing. Use full loads only.",
+            "title": "Wash with full loads during off-peak hours",
+            "description": (
+                "Running the washing machine with full loads reduces the number of "
+                "cycles needed. In Sri Lanka, washing with cold water also saves "
+                "significantly as water heating accounts for a large portion of "
+                "washer energy use. Aim for 2–3 full loads per week instead of "
+                "daily smaller loads."
+            ),
             "category": "Washing Machine",
-            "saving_kwh": round(washer_hours / 7 * 1.2 * 30, 1),
+            "saving_kwh": round(washer_hours / 7 * 1.0 * 30, 1),
             "icon": "washer",
         })
 
+    # --- Water heater ---
     if heater_hours > 1:
         recs.append({
-            "title": "Use solar water heating",
-            "description": "A solar water heater can eliminate water heating electricity costs entirely.",
+            "title": "Reduce water heater usage time",
+            "description": (
+                "Water heaters are one of the highest energy consumers in Sri Lankan "
+                "homes. Switch the heater on only 15–20 minutes before use instead "
+                "of leaving it on all day. This simple habit change can save "
+                f"~{round(heater_hours / 7 * 1.0 * 30, 1)} kWh/month at no cost."
+            ),
             "category": "Water Heater",
-            "saving_kwh": round(heater_hours / 7 * 1.5 * 30, 1),
+            "saving_kwh": round(heater_hours / 7 * 1.0 * 30, 1),
             "icon": "heater",
         })
 
-    if fan_count == 0 and ac_count > 0:
+    # --- CEB tier awareness ---
+    if units > 60:
         recs.append({
-            "title": "Use fans alongside AC",
-            "description": "Ceiling fans improve air circulation, letting you raise the AC temperature by 2–3°C without discomfort.",
-            "category": "Fans",
-            "saving_kwh": round(ac_count * ac_hours * 0.1 * 30, 1),
-            "icon": "fan",
+            "title": "Stay below the next CEB tariff tier",
+            "description": (
+                "Sri Lanka's CEB uses a progressive tariff — the more you use, the "
+                "higher the rate for ALL units, not just the extra ones. Reducing "
+                "usage to stay under 90, 120, or 180 units can result in a "
+                "significantly lower total bill. Even saving 5–10 units can drop "
+                "you to a cheaper tier."
+            ),
+            "category": "General",
+            "saving_kwh": round(units * 0.05, 1),
+            "icon": "plug",
         })
 
+    # --- Lighting ---
     recs.append({
-        "title": "Switch to LED lighting",
-        "description": "LED bulbs use 75% less energy than incandescent bulbs and last 25× longer.",
+        "title": "Switch all bulbs to LED",
+        "description": (
+            "LED bulbs use 75% less electricity than incandescent bulbs and last "
+            "years longer. In Sri Lanka, replacing 5 bulbs saves approximately "
+            f"{round(members * 0.25 * 30, 1)} kWh/month. LED bulbs are widely "
+            "available at supermarkets for LKR 200–400 each and pay for themselves "
+            "within 1–2 months."
+        ),
         "category": "Lighting",
-        "saving_kwh": round(members * 0.3 * 30, 1),
+        "saving_kwh": round(members * 0.25 * 30, 1),
         "icon": "bulb",
     })
 
+    # --- Standby power ---
     recs.append({
-        "title": "Unplug standby devices",
-        "description": "Devices on standby can account for 10% of your bill. Unplug chargers and electronics when not in use.",
+        "title": "Unplug devices not in use",
+        "description": (
+            "Televisions, phone chargers, microwave ovens, and set-top boxes consume "
+            "electricity even on standby. In a typical Colombo household, standby "
+            "power accounts for 8–10% of the total bill. Using a power strip with "
+            "a switch to cut off multiple devices at once is an easy and free habit."
+        ),
         "category": "General",
         "saving_kwh": round(units * 0.08, 1),
+        "icon": "plug",
+    })
+
+    # --- Iron ---
+    recs.append({
+        "title": "Iron clothes in batches",
+        "description": (
+            "Electric irons use 1,000–2,500W — one of the highest wattage appliances "
+            "in the home. Ironing a week's clothes in one session instead of daily "
+            "reduces warm-up energy waste. This is a simple habit change with no cost."
+        ),
+        "category": "General",
+        "saving_kwh": round(members * 0.1 * 30, 1),
         "icon": "plug",
     })
 

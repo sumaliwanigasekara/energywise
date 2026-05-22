@@ -20,16 +20,22 @@ class Prediction(db.Model):
     # Appliances
     fan_count = db.Column(db.Integer)
     ac_count = db.Column(db.Integer)
-    ac_hours_per_day = db.Column(db.Float)
+    ac_hours_per_week = db.Column(db.Float) 
     ac_tons = db.Column(db.Float)
     fridge_count = db.Column(db.Integer)
     washer_hours_per_week = db.Column(db.Float)
     heater_hours_per_week = db.Column(db.Float)
-    other_hours_per_day = db.Column(db.Float)
+    other_hours_per_week = db.Column(db.Float)
 
-    # Weather
-    temperature = db.Column(db.Float)
-    weather_condition = db.Column(db.String(100))
+    # Weather — Weekly Averages (ML Features)
+    avg_temp = db.Column(db.Float)
+    avg_humidity = db.Column(db.Float)
+    total_precip = db.Column(db.Float)
+    avg_wind = db.Column(db.Float)
+
+    # Temporal
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
 
     # ML outputs
     predicted_units = db.Column(db.Float)
@@ -44,21 +50,31 @@ class Prediction(db.Model):
             "user_id": self.user_id,
             "members": self.members,
             "district": self.district,
-            "prev_bill_1": self.prev_bill_1,
-            "prev_bill_2": self.prev_bill_2,
-            "prev_bill_3": self.prev_bill_3,
-            "fan_count": self.fan_count,
-            "ac_count": self.ac_count,
-            "ac_hours_per_day": self.ac_hours_per_day,
-            "ac_tons": self.ac_tons,
-            "fridge_count": self.fridge_count,
-            "washer_hours_per_week": self.washer_hours_per_week,
-            "heater_hours_per_week": self.heater_hours_per_week,
-            "other_hours_per_day": self.other_hours_per_day,
-            "temperature": self.temperature,
-            "weather_condition": self.weather_condition,
-            "predicted_units": round(self.predicted_units, 2),
-            "predicted_bill": round(self.predicted_bill, 2),
-            "risk_level": self.risk_level,
+            "prev_bills": [self.prev_bill_1, self.prev_bill_2, self.prev_bill_3],
+            "appliances": {
+                "fan_count": self.fan_count,
+                "ac_count": self.ac_count,
+                "ac_hours_per_week": self.ac_hours_per_week,
+                "ac_tons": self.ac_tons,
+                "fridge_count": self.fridge_count,
+                "washer_hours_per_week": self.washer_hours_per_week,
+                "heater_hours_per_week": self.heater_hours_per_week,
+                "other_hours_per_week": self.other_hours_per_week,
+            },
+            "weather": {
+                "avg_temp": self.avg_temp,
+                "avg_humidity": self.avg_humidity,
+                "total_precip": self.total_precip,
+                "avg_wind": self.avg_wind,
+                "period": (
+                    f"{self.start_date.date()} to {self.end_date.date()}"
+                    if self.start_date and self.end_date else None
+                )
+            },
+            "prediction": {
+                "units": round(self.predicted_units, 2),
+                "bill": round(self.predicted_bill, 2),
+                "risk_level": self.risk_level,
+            },
             "created_at": self.created_at.isoformat(),
         }

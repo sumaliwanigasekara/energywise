@@ -1,4 +1,14 @@
+"""
+weather_service.py
+Fetches the past 7-day weather average for a Sri Lankan district.
+Uses Open-Meteo archive API for historical data.
+
+Weekly averages align with the weekly temporal resolution used across
+all datasets in this study (appliance usage, consumption patterns).
+"""
+
 import requests
+from datetime import date, timedelta
 
 DISTRICT_COORDS = {
     "colombo":      (6.9271,  79.8612),
@@ -27,55 +37,77 @@ WMO_CONDITIONS = {
     95: "Thunderstorm", 96: "Thunderstorm with hail",
 }
 
+FALLBACK = {
+    "avg_temp":     29.0,
+    "avg_humidity": 78.0,
+    "total_precip": 15.0,
+    "avg_wind":     12.0,
+}
+
 
 def get_weather(district: str) -> dict:
+    """
+    Fetch 7-day average weather for a district.
+    Uses archive API for past 7 days — more representative
+    of the billing period than a single current reading.
+    """
     district = district.lower().replace(" ", "_")
     lat, lon = DISTRICT_COORDS.get(district, DISTRICT_COORDS["colombo"])
 
+    # Past 7 days — yesterday back to 7 days ago
+    # (archive API needs completed days, not today)
+    end_date   = date.today() - timedelta(days=1)
+    start_date = end_date - timedelta(days=6)
+
     url = (
-        f"https://api.open-meteo.com/v1/forecast"
+        f"https://archive-api.open-meteo.com/v1/archive"
         f"?latitude={lat}&longitude={lon}"
-        f"&current=temperature_2m,relative_humidity_2m,weathercode"
-        f"&daily=temperature_2m_max,temperature_2m_min"
+        f"&start_date={start_date.isoformat()}"
+        f"&end_date={end_date.isoformat()}"
+        f"&daily=temperature_2m_max,temperature_2m_min,"
+        f"relative_humidity_2m_mean,precipitation_sum,"
+        f"windspeed_10m_max"
         f"&timezone=Asia%2FColombo"
-        f"&forecast_days=7"
     )
 
     try:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
-        data = resp.json()
+        daily = resp.json().get("daily", {})
 
-        current = data.get("current", {})
-        daily = data.get("daily", {})
+        temps_max  = daily.get("temperature_2m_max", [])
+        temps_min  = daily.get("temperature_2m_min", [])
+        humidities = daily.get("relative_humidity_2m_mean", [])
+        precips    = daily.get("precipitation_sum", [])
+        winds      = daily.get("windspeed_10m_max", [])
 
-        temperature = current.get("temperature_2m", 30.0)
-        humidity = current.get("relative_humidity_2m", 75)
-        wmo = current.get("weathercode", 0)
-        condition = WMO_CONDITIONS.get(wmo, "Unknown")
+        def avg(lst):
+            return round(sum(lst) / len(lst), 1) if lst else 0.0
 
-        max_temps = daily.get("temperature_2m_max", [temperature] * 7)
-        min_temps = daily.get("temperature_2m_min", [temperature] * 7)
-        avg_temp = round(
-            sum((h + l) / 2 for h, l in zip(max_temps, min_temps)) / len(max_temps), 1
-        )
+        # Daily mean temp = (max + min) / 2, then average across 7 days
+        daily_means = [(h + l) / 2 for h, l in zip(temps_max, temps_min)]
+        avg_temp    = round(avg(daily_means), 1)
+        avg_humidity = avg(humidities)
+        total_precip = round(sum(precips), 1) if precips else 0.0
+        avg_wind     = avg(winds)
 
         return {
-            "temperature": round(temperature, 1),
-            "humidity": humidity,
-            "condition": condition,
-            "avg_temperature": avg_temp,
-            "district": district,
-            "lat": lat,
-            "lon": lon,
+            "avg_temp":     avg_temp,
+            "avg_humidity": avg_humidity,
+            "total_precip": total_precip,
+            "avg_wind":     avg_wind,
+            "period_start": start_date.isoformat(),
+            "period_end":   end_date.isoformat(),
+            "district":     district,
+            "lat":          lat,
+            "lon":          lon,
         }
 
     except Exception as e:
         return {
-            "temperature": 30.0,
-            "humidity": 75,
-            "condition": "Unavailable",
-            "avg_temperature": 30.0,
-            "district": district,
-            "error": str(e),
+            **FALLBACK,
+            "period_start": (date.today() - timedelta(days=7)).isoformat(),
+            "period_end":   (date.today() - timedelta(days=1)).isoformat(),
+            "district":     district,
+            "error":        str(e),
         }
