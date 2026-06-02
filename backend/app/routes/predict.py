@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models.prediction import Prediction
+from app.models.appliances import UserAppliances
 from app.services import ml_service
 from app.services.weather_service import get_weather
 
@@ -15,7 +16,15 @@ def predict():
     user_id = int(get_jwt_identity())
     data = request.get_json()
 
-    district = data.get("district", "colombo")
+    # Fall back to saved appliance profile for fields not supplied in the request
+    profile = UserAppliances.query.filter_by(user_id=user_id).first()
+
+    def _from_profile(key, default):
+        if data.get(key) is not None:
+            return data[key]
+        return getattr(profile, key, default) if profile else default
+
+    district = data.get("district") or _from_profile("district", "colombo")
     weather = get_weather(district)
 
     def _parse_date(val):
@@ -27,19 +36,19 @@ def predict():
             return None
 
     payload = {
-        "members": int(data.get("members", 4)),
+        "members": int(_from_profile("members", 4)),
         "prev_bill_1": float(data.get("prev_bill_1") or 0),
         "prev_bill_2": float(data.get("prev_bill_2") or 0),
         "prev_bill_3": float(data.get("prev_bill_3") or 0),
-        "fan_count": int(data.get("fan_count", 0)),
-        "ac_count": int(data.get("ac_count", 0)),
+        "fan_count": int(_from_profile("fan_count", 0)),
+        "ac_count": int(_from_profile("ac_count", 0)),
         "ac_hours_per_week": float(data.get("ac_hours_per_week") or 0),
-        "ac_tons": float(data.get("ac_tons") or 1.5),
-        "fridge_count": int(data.get("fridge_count", 0)),
+        "ac_tons": float(_from_profile("ac_tons", 1.5)),
+        "fridge_count": int(_from_profile("fridge_count", 1)),
         "washer_hours_per_week": float(data.get("washer_hours_per_week") or 0),
         "heater_hours_per_week": float(data.get("heater_hours_per_week") or 0),
         "other_hours_per_week": float(data.get("other_hours_per_week") or 2),
-        "weather": weather,   # pass the full weather dict
+        "weather": weather,
     }
 
     result = ml_service.predict(payload)
