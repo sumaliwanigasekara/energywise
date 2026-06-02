@@ -1,9 +1,9 @@
 """
 weather_service.py
-Fetches the past 7-day weather average for a Sri Lankan district.
+Fetches the past 30-day weather average for a Sri Lankan district.
 Uses Open-Meteo archive API for historical data.
 
-Weekly averages align with the weekly temporal resolution used across
+Monthly averages align with the monthly temporal resolution used across
 all datasets in this study (appliance usage, consumption patterns).
 """
 
@@ -47,17 +47,17 @@ FALLBACK = {
 
 def get_weather(district: str) -> dict:
     """
-    Fetch 7-day average weather for a district.
-    Uses archive API for past 7 days — more representative
+    Fetch 30-day monthly average weather for a district.
+    Uses archive API for past 30 days — more representative
     of the billing period than a single current reading.
     """
     district = district.lower().replace(" ", "_")
     lat, lon = DISTRICT_COORDS.get(district, DISTRICT_COORDS["colombo"])
 
-    # Past 7 days — yesterday back to 7 days ago
+    # Past 30 days — yesterday back to 30 days ago
     # (archive API needs completed days, not today)
     end_date   = date.today() - timedelta(days=1)
-    start_date = end_date - timedelta(days=6)
+    start_date = end_date - timedelta(days=29)
 
     url = (
         f"https://archive-api.open-meteo.com/v1/archive"
@@ -84,7 +84,7 @@ def get_weather(district: str) -> dict:
         def avg(lst):
             return round(sum(lst) / len(lst), 1) if lst else 0.0
 
-        # Daily mean temp = (max + min) / 2, then average across 7 days
+        # Daily mean temp = (max + min) / 2, then average across 30 days
         daily_means = [(h + l) / 2 for h, l in zip(temps_max, temps_min)]
         avg_temp    = round(avg(daily_means), 1)
         avg_humidity = avg(humidities)
