@@ -17,17 +17,17 @@ class Prediction(db.Model):
     prev_bill_2 = db.Column(db.Float)
     prev_bill_3 = db.Column(db.Float)
 
-    # Appliances
+    # Appliances — monthly hour totals
     fan_count = db.Column(db.Integer)
     ac_count = db.Column(db.Integer)
-    ac_hours_per_week = db.Column(db.Float) 
+    ac_hours_per_month = db.Column(db.Float)
     ac_tons = db.Column(db.Float)
     fridge_count = db.Column(db.Integer)
-    washer_hours_per_week = db.Column(db.Float)
-    heater_hours_per_week = db.Column(db.Float)
-    other_hours_per_week = db.Column(db.Float)
+    washer_hours_per_month = db.Column(db.Float)
+    heater_hours_per_month = db.Column(db.Float)
+    other_hours_per_month = db.Column(db.Float)
 
-    # Weather — Weekly Averages (ML Features)
+    # Weather — 30-day monthly averages (ML features)
     avg_temp = db.Column(db.Float)
     avg_humidity = db.Column(db.Float)
     total_precip = db.Column(db.Float)
@@ -54,12 +54,12 @@ class Prediction(db.Model):
             "appliances": {
                 "fan_count": self.fan_count,
                 "ac_count": self.ac_count,
-                "ac_hours_per_week": self.ac_hours_per_week,
+                "ac_hours_per_month": self.ac_hours_per_month,
                 "ac_tons": self.ac_tons,
                 "fridge_count": self.fridge_count,
-                "washer_hours_per_week": self.washer_hours_per_week,
-                "heater_hours_per_week": self.heater_hours_per_week,
-                "other_hours_per_week": self.other_hours_per_week,
+                "washer_hours_per_month": self.washer_hours_per_month,
+                "heater_hours_per_month": self.heater_hours_per_month,
+                "other_hours_per_month": self.other_hours_per_month,
             },
             "weather": {
                 "avg_temp": self.avg_temp,

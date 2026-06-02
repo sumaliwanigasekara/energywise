@@ -10,12 +10,12 @@ class UserAppliances(db.Model):
 
     fan_count = db.Column(db.Integer, default=0)
     ac_count = db.Column(db.Integer, default=0)
-    ac_hours_per_week = db.Column(db.Float, default=0)
+    ac_hours_per_month = db.Column(db.Float, default=0)
     ac_tons = db.Column(db.Float, default=1.5)
     fridge_count = db.Column(db.Integer, default=1)
-    washer_hours_per_week = db.Column(db.Float, default=0)
-    heater_hours_per_week = db.Column(db.Float, default=0)
-    other_hours_per_week = db.Column(db.Float, default=0)
+    washer_hours_per_month = db.Column(db.Float, default=0)
+    heater_hours_per_month = db.Column(db.Float, default=0)
+    other_hours_per_month = db.Column(db.Float, default=0)
 
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -25,11 +25,11 @@ class UserAppliances(db.Model):
             "user_id": self.user_id,
             "fan_count": self.fan_count,
             "ac_count": self.ac_count,
-            "ac_hours_per_week": self.ac_hours_per_week,
+            "ac_hours_per_month": self.ac_hours_per_month,
             "ac_tons": self.ac_tons,
             "fridge_count": self.fridge_count,
-            "washer_hours_per_week": self.washer_hours_per_week,
-            "heater_hours_per_week": self.heater_hours_per_week,
-            "other_hours_per_week": self.other_hours_per_week,
+            "washer_hours_per_month": self.washer_hours_per_month,
+            "heater_hours_per_month": self.heater_hours_per_month,
+            "other_hours_per_month": self.other_hours_per_month,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
