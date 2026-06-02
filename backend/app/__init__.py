@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -26,6 +25,7 @@ def create_app():
     from app.routes.history import history_bp
     from app.routes.bills import bills_bp
     from app.routes.admin import admin_bp
+    from app.routes.appliances import appliances_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(predict_bp, url_prefix="/api")
@@ -33,6 +33,7 @@ def create_app():
     app.register_blueprint(history_bp, url_prefix="/api")
     app.register_blueprint(bills_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(appliances_bp, url_prefix="/api")
 
     with app.app_context():
         db.create_all()
