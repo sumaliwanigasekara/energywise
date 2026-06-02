@@ -1,7 +1,7 @@
 """
 train_model.py
 Generates synthetic Sri Lankan household electricity data and trains a
-RandomForestRegressor as a placeholder model.
+RandomForestRegressor. All appliance hour inputs are monthly totals.
 
 When Sumali has the real dataset:
   1. Load real data into X, y below
@@ -28,12 +28,12 @@ def generate_synthetic_data():
 
     fan_count = np.random.randint(0, 8, N)
     ac_count = np.random.randint(0, 4, N)
-    ac_hours_per_day = np.where(ac_count > 0, np.random.uniform(1, 14, N), 0.0)
+    ac_hours_per_month = np.where(ac_count > 0, np.random.uniform(0, 300, N), 0.0)
     ac_tons = np.random.choice([1.0, 1.5, 2.0], N)
     fridge_count = np.random.randint(0, 3, N)
-    washer_hours_week = np.random.uniform(0, 14, N)
-    heater_hours_week = np.random.uniform(0, 10, N)
-    other_hours_per_day = np.random.uniform(1, 8, N)
+    washer_hours_per_month = np.random.uniform(0, 60, N)
+    heater_hours_per_month = np.random.uniform(0, 43, N)
+    other_hours_per_month = np.random.uniform(4, 120, N)
 
     # Weather features
     avg_temp = np.random.uniform(24, 36, N)
@@ -42,14 +42,14 @@ def generate_synthetic_data():
     avg_wind = np.random.uniform(5, 30, N)
     month = np.random.randint(1, 13, N)
 
-    # Physics-based formula (appliance consumption)
+    # Physics-based formula using monthly hours directly
     daily_kwh = (
-        ac_count * ac_hours_per_day * ac_tons * 0.7
+        ac_count * (ac_hours_per_month / 30) * ac_tons * 0.7
         + fan_count * 0.06 * np.random.uniform(6, 14, N)
         + fridge_count * 0.15 * 24
-        + washer_hours_week / 7 * 2.0
-        + heater_hours_week / 7 * 1.5
-        + other_hours_per_day * 0.3
+        + washer_hours_per_month / 30 * 2.0
+        + heater_hours_per_month / 30 * 1.5
+        + (other_hours_per_month / 30) * 0.3
     )
 
     base_load = members * 0.25
@@ -67,21 +67,21 @@ def generate_synthetic_data():
 
     # Feature order must match ml_service.py exactly (15 features)
     X = pd.DataFrame({
-        "members":                members,          # 1
-        "avg_prev_bill":          avg_prev_bill,    # 2
-        "fan_count":              fan_count,        # 3
-        "ac_count":               ac_count,         # 4
-        "ac_hours_per_day":       ac_hours_per_day, # 5
-        "ac_tons":                ac_tons,          # 6
-        "fridge_count":           fridge_count,     # 7
-        "washer_hours_per_week":  washer_hours_week,# 8
-        "heater_hours_per_week":  heater_hours_week,# 9
-        "other_hours_per_day":    other_hours_per_day, # 10
-        "avg_temp":               avg_temp,         # 11
-        "avg_humidity":           avg_humidity,     # 12
-        "total_precip":           total_precip,     # 13
-        "avg_wind":               avg_wind,         # 14
-        "month":                  month,            # 15
+        "members":                 members,                 # 1
+        "avg_prev_bill":           avg_prev_bill,           # 2
+        "fan_count":               fan_count,               # 3
+        "ac_count":                ac_count,                # 4
+        "ac_hours_per_month":      ac_hours_per_month,      # 5
+        "ac_tons":                 ac_tons,                 # 6
+        "fridge_count":            fridge_count,            # 7
+        "washer_hours_per_month":  washer_hours_per_month,  # 8
+        "heater_hours_per_month":  heater_hours_per_month,  # 9
+        "other_hours_per_month":   other_hours_per_month,   # 10
+        "avg_temp":                avg_temp,                # 11
+        "avg_humidity":            avg_humidity,            # 12
+        "total_precip":            total_precip,            # 13
+        "avg_wind":                avg_wind,                # 14
+        "month":                   month,                   # 15
     })
 
     return X, monthly_units
