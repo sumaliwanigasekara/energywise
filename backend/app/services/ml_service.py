@@ -22,7 +22,7 @@ def _load_model():
 
 
 def predict(data: dict) -> dict:
-    
+    """Predict monthly electricity consumption. All hour inputs are monthly totals."""
     model = _load_model()
 
     avg_prev_bill = (
@@ -35,21 +35,21 @@ def predict(data: dict) -> dict:
     month = datetime.now().month
 
     features = np.array([[
-        data.get("members", 4),           # 1
-        avg_prev_bill,                     # 2
-        data.get("fan_count", 0),          # 3
-        data.get("ac_count", 0),           # 4
-        data.get("ac_hours_per_week", 0) / 7.0,  # 5 — daily avg
-        data.get("ac_tons", 1.5),          # 6
-        data.get("fridge_count", 1),       # 7
-        data.get("washer_hours_per_week", 0),     # 8
-        data.get("heater_hours_per_week", 0),     # 9
-        data.get("other_hours_per_week", 0) / 7.0,  # 10 — daily avg
-        weather.get("avg_temp", 29.0),     # 11
-        weather.get("avg_humidity", 78.0), # 12
-        weather.get("total_precip", 15.0), # 13
-        weather.get("avg_wind", 12.0),     # 14
-        month,                             # 15
+        data.get("members", 4),                    # 1
+        avg_prev_bill,                              # 2
+        data.get("fan_count", 0),                  # 3
+        data.get("ac_count", 0),                   # 4
+        data.get("ac_hours_per_month", 0),         # 5
+        data.get("ac_tons", 1.5),                  # 6
+        data.get("fridge_count", 1),               # 7
+        data.get("washer_hours_per_month", 0),     # 8
+        data.get("heater_hours_per_month", 0),     # 9
+        data.get("other_hours_per_month", 0),      # 10
+        weather.get("avg_temp", 29.0),             # 11
+        weather.get("avg_humidity", 78.0),         # 12
+        weather.get("total_precip", 15.0),         # 13
+        weather.get("avg_wind", 12.0),             # 14
+        month,                                     # 15
     ]])
 
     predicted_units = float(model.predict(features)[0])
@@ -69,15 +69,12 @@ def predict(data: dict) -> dict:
 
 
 def _appliance_breakdown(data: dict) -> dict:
-    """Estimate monthly kWh using weekly usage data scaled to 30 days."""
-    # 4.3 weeks per month
-    
-    ac = data.get("ac_count", 0) * (data.get("ac_hours_per_week", 0) / 7) * data.get("ac_tons", 1.5) * 0.7 * 30
+    ac = data.get("ac_count", 0) * (data.get("ac_hours_per_month", 0) / 30) * data.get("ac_tons", 1.5) * 0.7 * 30
     fans = data.get("fan_count", 0) * 0.06 * 10 * 30
     fridge = data.get("fridge_count", 1) * 0.15 * 24 * 30
-    heater = (data.get("heater_hours_per_week", 0) * 4.3) * 1.5 
-    washer = (data.get("washer_hours_per_week", 0) * 4.3) * 2.0 
-    other = (data.get("other_hours_per_week", 14) / 7) * 0.3 * 30
+    heater = data.get("heater_hours_per_month", 0) * 1.5
+    washer = data.get("washer_hours_per_month", 0) * 2.0
+    other = (data.get("other_hours_per_month", 14) / 30) * 0.3 * 30
     base = data.get("members", 4) * 0.2 * 30
 
     return {
@@ -95,21 +92,22 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
     recs = []
 
     ac_count = data.get("ac_count", 0)
-    ac_hours = data.get("ac_hours_per_week", 0) / 7.0
+    ac_hours_per_month = data.get("ac_hours_per_month", 0)
+    ac_hours_daily = ac_hours_per_month / 30
     ac_tons = data.get("ac_tons", 1.5)
     fan_count = data.get("fan_count", 0)
     fridge_count = data.get("fridge_count", 0)
-    washer_hours = data.get("washer_hours_per_week", 0)
-    heater_hours = data.get("heater_hours_per_week", 0)
+    washer_hours = data.get("washer_hours_per_month", 0)
+    heater_hours = data.get("heater_hours_per_month", 0)
     members = data.get("members", 4)
 
     # --- AC recommendations ---
-    if ac_count > 0 and ac_hours > 6:
-        saving = round(ac_count * (ac_hours - 6) * ac_tons * 0.7 * 30, 1)
+    if ac_count > 0 and ac_hours_daily > 6:
+        saving = round(ac_count * (ac_hours_daily - 6) * ac_tons * 0.7 * 30, 1)
         recs.append({
             "title": "Reduce AC usage hours",
             "description": (
-                f"Your AC runs {ac_hours:.0f} hrs/day. Reducing to 6 hrs could save "
+                f"Your AC runs {ac_hours_daily:.0f} hrs/day. Reducing to 6 hrs could save "
                 f"~{saving} kWh/month. In Colombo's climate, switching the AC off at "
                 f"night and using a ceiling fan instead can reduce your bill significantly."
             ),
@@ -127,7 +125,7 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                 "costs by up to 36% — no hardware change needed, just a setting adjustment."
             ),
             "category": "Air Conditioner",
-            "saving_kwh": round(ac_count * ac_hours * 0.18 * 30, 1),
+            "saving_kwh": round(ac_count * ac_hours_daily * 0.18 * 30, 1),
             "icon": "temperature",
         })
 
@@ -141,7 +139,7 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                 "for Sri Lankan households."
             ),
             "category": "Air Conditioner",
-            "saving_kwh": round(ac_count * ac_hours * 0.12 * 30, 1),
+            "saving_kwh": round(ac_count * ac_hours_daily * 0.12 * 30, 1),
             "icon": "fan",
         })
 
@@ -155,7 +153,7 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                 "dusty urban environment."
             ),
             "category": "Air Conditioner",
-            "saving_kwh": round(ac_count * ac_hours * ac_tons * 0.7 * 0.1 * 30, 1),
+            "saving_kwh": round(ac_count * ac_hours_daily * ac_tons * 0.7 * 0.1 * 30, 1),
             "icon": "ac",
         })
 
@@ -189,7 +187,7 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
         })
 
     # --- Washing machine ---
-    if washer_hours > 2:
+    if washer_hours > 8:
         recs.append({
             "title": "Wash with full loads during off-peak hours",
             "description": (
@@ -200,22 +198,22 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                 "daily smaller loads."
             ),
             "category": "Washing Machine",
-            "saving_kwh": round(washer_hours / 7 * 1.0 * 30, 1),
+            "saving_kwh": round(washer_hours * 1.0, 1),
             "icon": "washer",
         })
 
     # --- Water heater ---
-    if heater_hours > 1:
+    if heater_hours > 4:
         recs.append({
             "title": "Reduce water heater usage time",
             "description": (
                 "Water heaters are one of the highest energy consumers in Sri Lankan "
                 "homes. Switch the heater on only 15–20 minutes before use instead "
                 "of leaving it on all day. This simple habit change can save "
-                f"~{round(heater_hours / 7 * 1.0 * 30, 1)} kWh/month at no cost."
+                f"~{round(heater_hours * 1.0, 1)} kWh/month at no cost."
             ),
             "category": "Water Heater",
-            "saving_kwh": round(heater_hours / 7 * 1.0 * 30, 1),
+            "saving_kwh": round(heater_hours * 1.0, 1),
             "icon": "heater",
         })
 
