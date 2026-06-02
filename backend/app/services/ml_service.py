@@ -1,6 +1,7 @@
 import os
 import joblib
 import numpy as np
+from datetime import datetime
 from app.services.tariff_service import calculate_bill, get_risk_level
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../ml/model.pkl")
@@ -31,19 +32,24 @@ def predict(data: dict) -> dict:
     ) / 3.0
 
     weather = data.get("weather", {})
+    month = datetime.now().month
 
     features = np.array([[
-        data.get("members", 4),
-        avg_prev_bill,
-        data.get("fan_count", 0),
-        data.get("ac_count", 0),
-        data.get("ac_hours_per_week", 0) / 7.0,
-        data.get("ac_tons", 1.5),
-        data.get("fridge_count", 1),
-        data.get("washer_hours_per_week", 0),
-        data.get("heater_hours_per_week", 0),
-        data.get("other_hours_per_week", 0) / 7.0,
-        weather.get("avg_temp", 29.0),
+        data.get("members", 4),           # 1
+        avg_prev_bill,                     # 2
+        data.get("fan_count", 0),          # 3
+        data.get("ac_count", 0),           # 4
+        data.get("ac_hours_per_week", 0) / 7.0,  # 5 — daily avg
+        data.get("ac_tons", 1.5),          # 6
+        data.get("fridge_count", 1),       # 7
+        data.get("washer_hours_per_week", 0),     # 8
+        data.get("heater_hours_per_week", 0),     # 9
+        data.get("other_hours_per_week", 0) / 7.0,  # 10 — daily avg
+        weather.get("avg_temp", 29.0),     # 11
+        weather.get("avg_humidity", 78.0), # 12
+        weather.get("total_precip", 15.0), # 13
+        weather.get("avg_wind", 12.0),     # 14
+        month,                             # 15
     ]])
 
     predicted_units = float(model.predict(features)[0])
