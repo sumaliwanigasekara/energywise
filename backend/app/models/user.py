@@ -15,6 +15,13 @@ class User(db.Model):
 
     predictions = db.relationship("Prediction", backref="user", lazy=True, cascade="all, delete-orphan")
     bills = db.relationship("Bill", backref="user", lazy=True, cascade="all, delete-orphan")
+    appliance_profile = db.relationship(
+        "UserAppliances",
+        backref="user",
+        lazy=True,
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, name, email, password, role="user", district="Colombo"):
         self.name = name
