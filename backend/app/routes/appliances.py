@@ -7,9 +7,9 @@ from app.models.appliances import UserAppliances
 appliances_bp = Blueprint("appliances", __name__)
 
 _FIELDS = [
-    "fan_count", "ac_count", "ac_hours_per_week", "ac_tons",
-    "fridge_count", "washer_hours_per_week", "heater_hours_per_week",
-    "other_hours_per_week",
+    "fan_count", "ac_count", "ac_hours_per_month", "ac_tons",
+    "fridge_count", "washer_hours_per_month", "heater_hours_per_month",
+    "other_hours_per_month",
 ]
 
 
