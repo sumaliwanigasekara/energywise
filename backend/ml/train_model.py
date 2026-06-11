@@ -18,6 +18,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
+from sklearn.linear_model import LinearRegression
 import joblib
 
 SAVE_PATH    = os.path.join(os.path.dirname(__file__), "model.pkl")
@@ -130,6 +131,12 @@ def train():
     )
     print(f"\nTraining on {len(X_train)} rows | Testing on {len(X_test)} rows")
 
+    # --- Linear Regression (baseline) ---
+    print("\nTraining Linear Regression baseline...")
+    lr_model = LinearRegression()
+    lr_model.fit(X_train, y_train)
+    lr_mae, lr_mse, lr_r2 = evaluate(lr_model, X_test, y_test, "Linear Regression")
+
     # --- Random Forest ---
     print("\nTraining RandomForestRegressor...")
     rf_model = RandomForestRegressor(
@@ -159,10 +166,10 @@ def train():
 
     # --- Compare and save winner ---
     print("\n--- Model Comparison ---")
-    print(f"{'Metric':<10} {'Random Forest':>15} {'XGBoost':>15}")
-    print(f"{'MAE':<10} {rf_mae:>15.2f} {xgb_mae:>15.2f}")
-    print(f"{'MSE':<10} {rf_mse:>15.2f} {xgb_mse:>15.2f}")
-    print(f"{'R²':<10} {rf_r2:>15.4f} {xgb_r2:>15.4f}")
+    print(f"{'Metric':<10} {'Linear Regression':>18} {'Random Forest':>15} {'XGBoost':>15}")
+    print(f"{'MAE':<10} {lr_mae:>18.2f} {rf_mae:>15.2f} {xgb_mae:>15.2f}")
+    print(f"{'MSE':<10} {lr_mse:>18.2f} {rf_mse:>15.2f} {xgb_mse:>15.2f}")
+    print(f"{'R²':<10} {lr_r2:>18.4f} {rf_r2:>15.4f} {xgb_r2:>15.4f}")
 
     if rf_r2 >= xgb_r2:
         winner = rf_model
