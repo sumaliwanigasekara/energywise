@@ -143,6 +143,7 @@ def train():
         n_estimators=200,
         max_depth=12,
         min_samples_leaf=5,
+        max_features = 5,
         random_state=42,
         n_jobs=-1,
     )
