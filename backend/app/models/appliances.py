@@ -9,6 +9,7 @@ class UserAppliances(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
 
     fan_count = db.Column(db.Integer, default=0)
+    fan_hours_per_month = db.Column(db.Float, default=0)
     ac_count = db.Column(db.Integer, default=0)
     ac_hours_per_month = db.Column(db.Float, default=0)
     ac_tons = db.Column(db.Float, default=1.5)
@@ -24,6 +25,7 @@ class UserAppliances(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "fan_count": self.fan_count,
+            "fan_hours_per_month": self.fan_hours_per_month,
             "ac_count": self.ac_count,
             "ac_hours_per_month": self.ac_hours_per_month,
             "ac_tons": self.ac_tons,

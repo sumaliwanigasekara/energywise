@@ -41,6 +41,7 @@ def predict():
         "prev_bill_2": float(data.get("prev_bill_2") or 0),
         "prev_bill_3": float(data.get("prev_bill_3") or 0),
         "fan_count": int(_from_profile("fan_count", 0)),
+        "fan_hours_per_month": float(_from_profile("fan_hours_per_month", 0)),
         "ac_count": int(_from_profile("ac_count", 0)),
         "ac_hours_per_month": float(_from_profile("ac_hours_per_month", 0)),
         "ac_tons": float(_from_profile("ac_tons", 1.5)),

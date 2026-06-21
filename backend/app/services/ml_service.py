@@ -1,3 +1,137 @@
+import os
+from datetime import datetime
+
+import joblib
+import numpy as np
+import pandas as pd
+
+from app.services.tariff_service import calculate_bill, get_risk_level
+
+# Loaded once when the module is first imported — not on every request
+_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "ml", "model.pkl")
+_model = joblib.load(_MODEL_PATH)
+
+_FEATURE_COLS = [
+    "members", "avg_prev_bill", "prev_month_consumption",
+    "std_prev_3months", "consumption_trend",
+    "fan_count", "fan_hours_per_month",
+    "ac_count", "ac_hours_per_month", "ac_tons", "fridge_count",
+    "washer_hours_per_month", "heater_hours_per_month",
+    "other_hours_per_month", "avg_temp", "avg_humidity",
+    "total_precip", "avg_wind", "month",
+    "ac_kwh_est", "total_load_est",
+]
+
+
+def predict(payload: dict) -> dict:
+    prev_bills = [
+        payload.get("prev_bill_1", 0),
+        payload.get("prev_bill_2", 0),
+        payload.get("prev_bill_3", 0),
+    ]
+    non_zero = [b for b in prev_bills if b > 0]
+    avg_prev_bill          = float(np.mean(non_zero)) if non_zero else 0.0
+    prev_month_consumption = float(prev_bills[0]) if prev_bills[0] > 0 else avg_prev_bill
+    std_prev_3months       = float(np.std(non_zero)) if len(non_zero) >= 2 else 0.0
+    consumption_trend      = float(prev_bills[0] - prev_bills[1]) if (prev_bills[0] > 0 and prev_bills[1] > 0) else 0.0
+
+    weather = payload.get("weather") or {}
+
+    ac_count              = payload.get("ac_count", 0)
+    ac_hours_per_month    = payload.get("ac_hours_per_month", 0)
+    ac_tons               = payload.get("ac_tons", 1.5)
+    fan_count             = payload.get("fan_count", 0)
+    fan_hours_per_month   = payload.get("fan_hours_per_month", 0)
+    fridge_count          = payload.get("fridge_count", 1)
+    washer_hours_per_month = payload.get("washer_hours_per_month", 0)
+    heater_hours_per_month = payload.get("heater_hours_per_month", 0)
+    other_hours_per_month  = payload.get("other_hours_per_month", 2)
+
+    ac_kwh_est    = ac_count * ac_hours_per_month * ac_tons * 0.7
+    total_load_est = (
+        ac_kwh_est
+        + fan_count * 0.06 * fan_hours_per_month
+        + fridge_count * 0.15 * 720
+        + washer_hours_per_month * 2.0
+        + heater_hours_per_month * 1.5
+        + other_hours_per_month * 0.3
+    )
+
+    features = pd.DataFrame([{
+        "members":                payload.get("members", 4),
+        "avg_prev_bill":          avg_prev_bill,
+        "prev_month_consumption": prev_month_consumption,
+        "std_prev_3months":       std_prev_3months,
+        "consumption_trend":      consumption_trend,
+        "fan_count":              fan_count,
+        "fan_hours_per_month":    fan_hours_per_month,
+        "ac_count":               ac_count,
+        "ac_hours_per_month":     ac_hours_per_month,
+        "ac_tons":                ac_tons,
+        "fridge_count":           fridge_count,
+        "washer_hours_per_month": washer_hours_per_month,
+        "heater_hours_per_month": heater_hours_per_month,
+        "other_hours_per_month":  other_hours_per_month,
+        "avg_temp":               weather.get("avg_temp", 29.0),
+        "avg_humidity":           weather.get("avg_humidity", 75.0),
+        "total_precip":           weather.get("total_precip", 100.0),
+        "avg_wind":               weather.get("avg_wind", 12.0),
+        "month":                  datetime.now().month,
+        "ac_kwh_est":             ac_kwh_est,
+        "total_load_est":         total_load_est,
+    }])[_FEATURE_COLS]
+
+    predicted_units = float(_model.predict(features)[0])
+    predicted_units = round(max(0.0, predicted_units), 2)
+    predicted_bill  = calculate_bill(predicted_units)
+    risk_level      = get_risk_level(predicted_units)
+
+    return {
+        "predicted_units":     predicted_units,
+        "predicted_bill":      predicted_bill,
+        "risk_level":          risk_level,
+        "recommendations":     _generate_recommendations(payload, predicted_units, predicted_bill),
+        "appliance_breakdown": _appliance_breakdown(payload, predicted_units),
+    }
+
+
+def _appliance_breakdown(data: dict, total_units: float) -> dict:
+    ac_count     = data.get("ac_count", 0)
+    ac_hours     = data.get("ac_hours_per_month", 0)
+    ac_tons      = data.get("ac_tons", 1.5)
+    fan_count    = data.get("fan_count", 0)
+    fan_hours    = data.get("fan_hours_per_month", 0)
+    fridge_count = data.get("fridge_count", 1)
+    washer_hours = data.get("washer_hours_per_month", 0)
+    heater_hours = data.get("heater_hours_per_month", 0)
+    other_hours  = data.get("other_hours_per_month", 2)
+    members      = data.get("members", 4)
+
+    ac_kwh     = round(ac_count * ac_hours * ac_tons * 0.7, 1)
+    fan_kwh    = round(fan_count * 0.06 * fan_hours, 1)
+    fridge_kwh = round(fridge_count * 0.15 * 24 * 30, 1)
+    washer_kwh = round(washer_hours * 2.0, 1)
+    heater_kwh = round(heater_hours * 1.5, 1)
+    other_kwh  = round(other_hours * 0.3, 1)
+    base_kwh   = round(members * 0.25 * 30, 1)
+
+    estimated_total = ac_kwh + fan_kwh + fridge_kwh + washer_kwh + heater_kwh + other_kwh + base_kwh
+    scale = (total_units / estimated_total) if estimated_total > 0 else 1.0
+
+    def _s(v):
+        return round(v * scale, 1)
+
+    return {
+        "air_conditioner": _s(ac_kwh),
+        "fans":            _s(fan_kwh),
+        "refrigerator":    _s(fridge_kwh),
+        "washing_machine": _s(washer_kwh),
+        "water_heater":    _s(heater_kwh),
+        "other":           _s(other_kwh),
+        "base_load":       _s(base_kwh),
+    }
+
+
 def _generate_recommendations(data: dict, units: float, bill: float) -> list:
     recs = []
 

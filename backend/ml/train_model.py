@@ -27,11 +27,14 @@ np.random.seed(42)
 N = 6000
 
 FEATURE_COLS = [
-    "members", "avg_prev_bill", "fan_count", "ac_count",
-    "ac_hours_per_month", "ac_tons", "fridge_count",
+    "members", "avg_prev_bill", "prev_month_consumption",
+    "std_prev_3months", "consumption_trend",
+    "fan_count", "fan_hours_per_month",
+    "ac_count", "ac_hours_per_month", "ac_tons", "fridge_count",
     "washer_hours_per_month", "heater_hours_per_month",
     "other_hours_per_month", "avg_temp", "avg_humidity",
-    "total_precip", "avg_wind", "month"
+    "total_precip", "avg_wind", "month",
+    "ac_kwh_est", "total_load_est",
 ]
 
 
@@ -42,6 +45,7 @@ def generate_synthetic_data():
     members = np.random.randint(1, 9, N)
     avg_prev_bill = np.random.uniform(500, 25000, N)
     fan_count = np.random.randint(0, 8, N)
+    fan_hours_per_month = np.where(fan_count > 0, np.random.uniform(60, 420, N), 0.0)
     ac_count = np.random.randint(0, 4, N)
     ac_hours_per_month = np.where(ac_count > 0, np.random.uniform(0, 300, N), 0.0)
     ac_tons = np.random.choice([1.0, 1.5, 2.0], N)
@@ -73,7 +77,7 @@ def generate_synthetic_data():
 
     X = pd.DataFrame({
         "members": members, "avg_prev_bill": avg_prev_bill,
-        "fan_count": fan_count, "ac_count": ac_count,
+        "fan_count": fan_count, "fan_hours_per_month": fan_hours_per_month, "ac_count": ac_count,
         "ac_hours_per_month": ac_hours_per_month, "ac_tons": ac_tons,
         "fridge_count": fridge_count,
         "washer_hours_per_month": washer_hours_per_month,
@@ -89,11 +93,37 @@ def generate_synthetic_data():
 # ---------------------------------------------------------------------------
 # LOAD DATA
 # ---------------------------------------------------------------------------
+def engineer_features(df):
+    """Add physics-based derived features."""
+    df = df.copy()
+    df["ac_kwh_est"] = (
+        df["ac_count"] * df["ac_hours_per_month"] * df["ac_tons"] * 0.7
+    )
+    df["total_load_est"] = (
+        df["ac_kwh_est"]
+        + df["fan_count"] * 0.06 * df["fan_hours_per_month"]
+        + df["fridge_count"] * 0.15 * 720
+        + df["washer_hours_per_month"] * 2.0
+        + df["heater_hours_per_month"] * 1.5
+        + df["other_hours_per_month"] * 0.3
+    )
+    return df
+
+
 def load_data():
     dataset_path = os.path.abspath(DATASET_PATH)
     if os.path.exists(dataset_path):
         print(f"Loading real dataset from: {dataset_path}")
         df = pd.read_csv(dataset_path)
+
+        # Filter to Colombo district only (district == 1)
+        before = len(df)
+        df = df[df["district"] == 1]
+        print(f"Colombo filter: {len(df)} rows kept from {before}")
+
+        # B: Add engineered features
+        df = engineer_features(df)
+
         X = df[FEATURE_COLS]
         y = df["consumption_kwh"]
         print(f"Real dataset loaded: {len(df)} rows")
@@ -153,11 +183,14 @@ def train():
     # --- XGBoost ---
     print("\nTraining XGBoostRegressor...")
     xgb_model = XGBRegressor(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.1,
+        n_estimators=500,
+        max_depth=5,
+        learning_rate=0.05,
         subsample=0.8,
-        colsample_bytree=0.8,
+        colsample_bytree=0.7,
+        min_child_weight=5,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
         random_state=42,
         n_jobs=-1,
         verbosity=0,
