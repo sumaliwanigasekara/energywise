@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
+import AdminLayout from './components/AdminLayout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -26,7 +27,7 @@ export default function App() {
           </Route>
 
           <Route element={<ProtectedRoute adminOnly />}>
-            <Route element={<Navbar />}>
+            <Route element={<AdminLayout />}>
               <Route path="/admin" element={<Admin />} />
             </Route>
           </Route>
