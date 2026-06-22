@@ -139,35 +139,96 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
     ac_hours_per_month = data.get("ac_hours_per_month", 0)
     ac_hours_daily    = ac_hours_per_month / 30
     ac_tons           = data.get("ac_tons", 1.5)
-    fan_count         = data.get("fan_count", 0)
-    fridge_count      = data.get("fridge_count", 0)
-    washer_hours      = data.get("washer_hours_per_month", 0)
-    heater_hours      = data.get("heater_hours_per_month", 0)
-    members           = data.get("members", 4)
+    fan_count              = data.get("fan_count", 0)
+    fan_hours_per_month    = data.get("fan_hours_per_month", 0)
+    fridge_count           = data.get("fridge_count", 0)
+    washer_hours           = data.get("washer_hours_per_month", 0)
+    heater_hours           = data.get("heater_hours_per_month", 0)
+    other_hours            = data.get("other_hours_per_month", 0)
+    members                = data.get("members", 4)
+    weather_data           = data.get("weather") or {}
+    avg_temp               = weather_data.get("avg_temp", 29.0)
+
+    prev_bills      = [data.get("prev_bill_1", 0), data.get("prev_bill_2", 0), data.get("prev_bill_3", 0)]
+    non_zero_bills  = [b for b in prev_bills if b > 0]
+    avg_prev        = float(np.mean(non_zero_bills)) if non_zero_bills else 0.0
+    bill_trend      = float(prev_bills[0] - prev_bills[1]) if (prev_bills[0] > 0 and prev_bills[1] > 0) else 0.0
+    bill_std        = float(np.std(non_zero_bills)) if len(non_zero_bills) >= 2 else 0.0
 
     # ------------------------------------------------------------------
-    # STEP 1 — Detect which schedule boundary the user is near
+    # STEP 1 — Detect which schedule/tier boundary the user is near
+    # Schedule 1: 0–60 kWh | Schedule 2: 61–180 kWh | Schedule 3: >180 kWh
+    # Within Schedule 2, fixed charge jumps at 90 kWh (+600 LKR) and 120 kWh (+500 LKR)
     # ------------------------------------------------------------------
     BOUNDARY_1 = 60    # Schedule 1 → Schedule 2
     BOUNDARY_2 = 180   # Schedule 2 → Schedule 3
-    NEAR_THRESHOLD = 20  # within 20 kWh of a boundary = "near"
+    TIER_90    = 90    # fixed charge jump inside Schedule 2
+    TIER_120   = 120   # fixed charge jump inside Schedule 2
+    NEAR       = 20    # within 20 kWh = "near"
+
+    gap = None
+    target_boundary = None
+    bill_saving_lkr = 0
 
     if units <= BOUNDARY_1:
-        gap = None  # already in lowest schedule, no boundary to chase
-        target_boundary = None
-    elif units <= BOUNDARY_1 + NEAR_THRESHOLD:
+        # Already in cheapest schedule — no boundary to chase
+        pass
+
+    elif units <= BOUNDARY_1 + NEAR:
+        # Just crossed into Schedule 2 — worth dropping back below 60
         gap = units - BOUNDARY_1
         target_boundary = BOUNDARY_1
-    elif units <= BOUNDARY_2:
-        gap = units - BOUNDARY_2 if units > BOUNDARY_2 else None
-        target_boundary = BOUNDARY_2 if units > BOUNDARY_2 else None
-    else:
+
+    elif BOUNDARY_2 - NEAR <= units <= BOUNDARY_2:
+        # Approaching Schedule 3 from below — warn to stay under 180
+        gap = None
+        target_boundary = None
+        approaching_saving = round(bill - calculate_bill(BOUNDARY_2 - 1), 2)
+        recs.append({
+            "title": f"Warning — you are {round(BOUNDARY_2 - units)} kWh from the expensive Schedule 3",
+            "description": (
+                f"You are at {round(units, 1)} kWh — just {round(BOUNDARY_2 - units)} kWh "
+                f"below the 180 kWh Schedule 3 boundary. Crossing it recalculates your "
+                f"entire bill at much higher rates (LKR 32.50–100/unit). Reduce any "
+                f"non-essential usage this month to stay under 180 kWh."
+            ),
+            "category": "Tariff Boundary",
+            "saving_kwh": round(units - (BOUNDARY_2 - 1), 1),
+            "saving_lkr": approaching_saving,
+            "icon": "plug",
+            "priority": "high",
+        })
+
+    elif units > BOUNDARY_2:
+        # Already in Schedule 3 — worth dropping back below 180
         gap = units - BOUNDARY_2
         target_boundary = BOUNDARY_2
 
-    # Recalculate what bill would be if they crossed the boundary
+    # Within Schedule 2: internal fixed-charge tier jumps
+    if BOUNDARY_1 < units <= BOUNDARY_2:
+        for tier_limit, next_fixed, prev_fixed in [(TIER_90, 1000, 400), (TIER_120, 1500, 1000)]:
+            if tier_limit < units <= tier_limit + NEAR:
+                tier_gap = units - tier_limit
+                tier_saving = round(next_fixed - prev_fixed, 0)
+                recs.append({
+                    "title": f"Save LKR {tier_saving:,.0f} fixed charge by staying under {tier_limit} kWh",
+                    "description": (
+                        f"You are {round(tier_gap, 1)} kWh above the {tier_limit} kWh internal "
+                        f"CEB tier. Crossing back below it removes a LKR {tier_saving:,.0f} "
+                        f"fixed monthly charge. Small reductions in AC or heater usage this "
+                        f"month could get you back under."
+                    ),
+                    "category": "Tariff Boundary",
+                    "saving_kwh": round(tier_gap + 1, 1),
+                    "saving_lkr": tier_saving,
+                    "icon": "plug",
+                    "priority": "high",
+                })
+                break  # Only flag the lowest crossed tier
+
+    # Recalculate savings for schedule-crossing recommendations
     if target_boundary and gap:
-        reduced_units = units - gap - 1  # just under the boundary
+        reduced_units = units - gap - 1
         bill_if_reduced = calculate_bill(reduced_units)
         bill_saving_lkr = round(bill - bill_if_reduced, 2)
     else:
@@ -421,6 +482,189 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
         "icon": "plug",
         "priority": "low",
     })
+
+    # ------------------------------------------------------------------
+    # STEP 6 — Usage pattern-based recommendations
+    # ------------------------------------------------------------------
+    fan_hours_daily = fan_hours_per_month / 30 if fan_count > 0 else 0.0
+
+    # Rising consumption trend
+    if bill_trend > 20:
+        trend_saving_lkr = round(bill - calculate_bill(units - bill_trend), 2)
+        recs.append({
+            "title": f"Your usage jumped {round(bill_trend)} kWh compared to last month",
+            "description": (
+                f"Your consumption is trending {round(bill_trend)} kWh higher than last month. "
+                f"This is often caused by increased AC usage during hot weather, a new appliance, "
+                f"or forgetting to switch off devices. Identifying the cause now can prevent a "
+                f"larger bill next month."
+            ),
+            "category": "Usage Trend",
+            "saving_kwh": round(bill_trend, 1),
+            "saving_lkr": trend_saving_lkr,
+            "icon": "trend",
+            "priority": "high",
+        })
+
+    # Bill falling — positive reinforcement
+    elif bill_trend < -20:
+        recs.append({
+            "title": f"Great — you used {abs(round(bill_trend))} kWh less than last month",
+            "description": (
+                f"Your consumption dropped {abs(round(bill_trend))} kWh compared to last month. "
+                f"Keep up the habits that caused this reduction to maintain a lower bill."
+            ),
+            "category": "Usage Trend",
+            "saving_kwh": 0,
+            "saving_lkr": 0,
+            "icon": "trend",
+            "priority": "low",
+        })
+
+    # High per-capita consumption
+    per_capita = units / members if members > 0 else units
+    if per_capita > 55:
+        per_capita_saving = round((per_capita - 45) * members, 1)
+        recs.append({
+            "title": f"High usage per person — {round(per_capita)} kWh per person this month",
+            "description": (
+                f"Your household averages {round(per_capita)} kWh per person per month. "
+                f"The Colombo average is 35–45 kWh per person. This suggests room-level "
+                f"appliance habits (leaving AC or lights on in unoccupied rooms) may be "
+                f"driving up your bill."
+            ),
+            "category": "Usage Pattern",
+            "saving_kwh": per_capita_saving,
+            "saving_lkr": round(bill - calculate_bill(units - per_capita_saving), 2),
+            "icon": "people",
+            "priority": "medium",
+        })
+
+    # Hot weather — proactive AC warning
+    if avg_temp > 28.5 and ac_count > 0:
+        heat_saving = round(ac_count * ac_hours_daily * ac_tons * 0.7 * 0.1 * 30, 1)
+        recs.append({
+            "title": f"Hot month ({avg_temp}°C) — take steps to reduce AC load",
+            "description": (
+                f"This month's average temperature is {avg_temp}°C, above Colombo's typical "
+                f"range. Your AC works harder in higher heat, consuming more electricity. "
+                f"Pre-cool your home in the early morning, use curtains during peak afternoon "
+                f"heat, and keep doors closed to hold the cool air in."
+            ),
+            "category": "Weather",
+            "saving_kwh": heat_saving,
+            "saving_lkr": round(bill - calculate_bill(units - heat_saving), 2),
+            "icon": "temperature",
+            "priority": "medium",
+        })
+
+    # High bill variability — irregular usage pattern
+    if bill_std > 30 and len(non_zero_bills) >= 2:
+        recs.append({
+            "title": "Irregular usage — your bill swings significantly month to month",
+            "description": (
+                f"Your consumption varies by up to {round(bill_std)} kWh between months. "
+                f"Large swings are often caused by occasional heavy usage — guests staying over, "
+                f"events at home, or accidentally leaving the AC on all day. "
+                f"Tracking your daily consumption for one month can identify the culprit."
+            ),
+            "category": "Usage Pattern",
+            "saving_kwh": round(bill_std * 0.5, 1),
+            "saving_lkr": round(bill - calculate_bill(units - bill_std * 0.5), 2),
+            "icon": "chart",
+            "priority": "medium",
+        })
+
+    # AC left on overnight (8+ hrs/day implies continuous overnight use)
+    if ac_count > 0 and ac_hours_daily >= 8:
+        overnight_saving = round(ac_count * 4 * ac_tons * 0.7 * 30, 1)
+        recs.append({
+            "title": "Set a sleep timer on your AC",
+            "description": (
+                f"Your AC runs approximately {round(ac_hours_daily)} hours/day, suggesting "
+                f"it stays on overnight. Colombo's nighttime temperatures are mild enough "
+                f"for a ceiling fan after midnight. Setting a sleep timer to switch the AC "
+                f"off after 3–4 hours and letting the fan take over can save "
+                f"~{overnight_saving} kWh/month."
+            ),
+            "category": "Air Conditioner",
+            "saving_kwh": overnight_saving,
+            "saving_lkr": round(bill - calculate_bill(units - overnight_saving), 2),
+            "icon": "ac",
+            "priority": "high" if overnight_saving >= 20 else "medium",
+        })
+
+    # AC with no fans — suggest buying fans
+    if ac_count > 0 and fan_count == 0:
+        no_fan_saving = round(ac_count * ac_hours_daily * ac_tons * 0.7 * 0.2 * 30, 1)
+        recs.append({
+            "title": "Add ceiling fans to reduce AC dependency",
+            "description": (
+                "You have AC but no ceiling fans. A ceiling fan uses only 60W and lets you "
+                "raise the AC thermostat by 2–3°C while feeling equally cool — cutting AC "
+                "costs by 15–20%. A fan costs LKR 5,000–12,000 and typically pays for "
+                "itself within 1–2 months at your current usage."
+            ),
+            "category": "Air Conditioner",
+            "saving_kwh": no_fan_saving,
+            "saving_lkr": round(bill - calculate_bill(units - no_fan_saving), 2),
+            "icon": "fan",
+            "priority": "medium",
+        })
+
+    # Fans running nearly 24 hours — suggest timers
+    if fan_count > 0 and fan_hours_daily > 18:
+        excess_fan_kwh = round(fan_count * (fan_hours_daily - 16) * 0.06 * 30, 1)
+        recs.append({
+            "title": "Fans running almost 24 hours — use timers",
+            "description": (
+                f"Your fans average {round(fan_hours_daily)} hours/day. While fans are energy "
+                f"efficient, setting them to switch off when rooms are unoccupied or using a "
+                f"timer overnight can save ~{excess_fan_kwh} kWh/month with no discomfort."
+            ),
+            "category": "Fans",
+            "saving_kwh": excess_fan_kwh,
+            "saving_lkr": round(bill - calculate_bill(units - excess_fan_kwh), 2),
+            "icon": "fan",
+            "priority": "low",
+        })
+
+    # High 'other appliances' usage — audit suggestion
+    other_kwh = round(other_hours * 0.3, 1)
+    if other_kwh > 50:
+        other_saving = round(other_kwh * 0.2, 1)
+        recs.append({
+            "title": "Audit your miscellaneous appliances",
+            "description": (
+                f"Your TVs, irons, microwave, and other devices account for approximately "
+                f"{other_kwh} kWh/month. Replacing high-wattage items with energy-efficient "
+                f"alternatives and avoiding standby mode could save at least "
+                f"{other_saving} kWh/month."
+            ),
+            "category": "General",
+            "saving_kwh": other_saving,
+            "saving_lkr": round(bill - calculate_bill(units - other_saving), 2),
+            "icon": "plug",
+            "priority": "low",
+        })
+
+    # Inverter AC upgrade suggestion (heavy AC users with non-inverter-scale hours)
+    if ac_count > 0 and ac_hours_daily > 5 and ac_tons >= 1.5:
+        inverter_saving = round(ac_count * ac_hours_daily * ac_tons * 0.7 * 0.3 * 30, 1)
+        recs.append({
+            "title": "Upgrade to an inverter AC for long-term savings",
+            "description": (
+                f"Non-inverter ACs use 30–40% more electricity than inverter models at "
+                f"your usage level ({round(ac_hours_daily)} hrs/day). Upgrading could save "
+                f"~{inverter_saving} kWh/month (LKR {round(bill - calculate_bill(units - inverter_saving)):,}). "
+                f"Payback period is typically 18–24 months in Colombo households."
+            ),
+            "category": "Air Conditioner",
+            "saving_kwh": inverter_saving,
+            "saving_lkr": round(bill - calculate_bill(units - inverter_saving), 2),
+            "icon": "ac",
+            "priority": "low",
+        })
 
     # Sort by priority: high first, then medium, then low
     priority_order = {"high": 0, "medium": 1, "low": 2}

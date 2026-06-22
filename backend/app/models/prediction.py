@@ -39,8 +39,14 @@ class Prediction(db.Model):
 
     # ML outputs
     predicted_units = db.Column(db.Float)
-    predicted_bill = db.Column(db.Float)
-    risk_level = db.Column(db.String(20))
+    predicted_bill  = db.Column(db.Float)
+    risk_level      = db.Column(db.String(20))
+    recommendations     = db.Column(db.JSON, nullable=True)
+    appliance_breakdown = db.Column(db.JSON, nullable=True)
+
+    # Actual bill entered by consumer after month ends
+    actual_units = db.Column(db.Float, nullable=True)
+    actual_bill  = db.Column(db.Float, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -50,31 +56,19 @@ class Prediction(db.Model):
             "user_id": self.user_id,
             "members": self.members,
             "district": self.district,
-            "prev_bills": [self.prev_bill_1, self.prev_bill_2, self.prev_bill_3],
-            "appliances": {
-                "fan_count": self.fan_count,
-                "ac_count": self.ac_count,
-                "ac_hours_per_month": self.ac_hours_per_month,
-                "ac_tons": self.ac_tons,
-                "fridge_count": self.fridge_count,
-                "washer_hours_per_month": self.washer_hours_per_month,
-                "heater_hours_per_month": self.heater_hours_per_month,
-                "other_hours_per_month": self.other_hours_per_month,
-            },
-            "weather": {
-                "avg_temp": self.avg_temp,
-                "avg_humidity": self.avg_humidity,
-                "total_precip": self.total_precip,
-                "avg_wind": self.avg_wind,
-                "period": (
-                    f"{self.start_date.date()} to {self.end_date.date()}"
-                    if self.start_date and self.end_date else None
-                )
-            },
-            "prediction": {
-                "units": round(self.predicted_units, 2),
-                "bill": round(self.predicted_bill, 2),
-                "risk_level": self.risk_level,
-            },
-            "created_at": self.created_at.isoformat(),
+            "predicted_units": round(self.predicted_units, 2) if self.predicted_units else 0,
+            "predicted_bill":  round(self.predicted_bill,  2) if self.predicted_bill  else 0,
+            "risk_level": self.risk_level,
+            "avg_temp":    self.avg_temp,
+            "avg_humidity": self.avg_humidity,
+            "total_precip": self.total_precip,
+            "avg_wind":     self.avg_wind,
+            "prev_bill_1": self.prev_bill_1,
+            "prev_bill_2": self.prev_bill_2,
+            "prev_bill_3": self.prev_bill_3,
+            "recommendations":     self.recommendations    or [],
+            "appliance_breakdown": self.appliance_breakdown or {},
+            "actual_units": self.actual_units,
+            "actual_bill":  self.actual_bill,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
