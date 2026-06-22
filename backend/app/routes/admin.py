@@ -36,12 +36,27 @@ def stats():
         .all()
     )
 
+    # Prediction accuracy — only for predictions where consumer entered actual units
+    actuals = Prediction.query.filter(Prediction.actual_units.isnot(None)).all()
+    if actuals:
+        accuracies = [
+            max(0, 1 - abs(p.predicted_units - p.actual_units) / p.actual_units) * 100
+            for p in actuals if p.actual_units > 0
+        ]
+        avg_accuracy = round(sum(accuracies) / len(accuracies), 1) if accuracies else None
+        predictions_with_actual = len(actuals)
+    else:
+        avg_accuracy = None
+        predictions_with_actual = 0
+
     return jsonify({
         "total_users": total_users,
         "total_predictions": total_predictions,
         "avg_predicted_bill": round(float(avg_bill), 2),
         "avg_predicted_units": round(float(avg_units), 2),
         "risk_distribution": {r: c for r, c in risk_dist},
+        "avg_accuracy": avg_accuracy,
+        "predictions_with_actual": predictions_with_actual,
     }), 200
 
 

@@ -86,6 +86,13 @@ export default function Admin() {
                   {stats.avg_predicted_units} kWh
                 </div>
               </div>
+              <div className="stat-card stat-card-green">
+                <div className="stat-label">Model Accuracy</div>
+                <div className="stat-value">
+                  {stats.avg_accuracy != null ? `${stats.avg_accuracy}%` : 'N/A'}
+                </div>
+                <div className="stat-sub">{stats.predictions_with_actual} verified predictions</div>
+              </div>
             </div>
           )}
 
