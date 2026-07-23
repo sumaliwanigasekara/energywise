@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import api from '../services/api'
 
-const RISK_COLORS = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
+const RISK_COLORS = { Low: '#10b981', Moderate: '#f59e0b', High: '#ef4444' }
 
 export default function Admin() {
   const [stats, setStats] = useState(null)

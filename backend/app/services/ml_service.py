@@ -5,7 +5,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from app.services.tariff_service import calculate_bill, get_risk_level
+from app.services.tariff_service import calculate_bill, get_consumption_level
 
 # Loaded once when the module is first imported — not on every request
 _MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "ml", "model.pkl")
@@ -84,12 +84,12 @@ def predict(payload: dict) -> dict:
     predicted_units = float(_model.predict(features)[0])
     predicted_units = round(max(0.0, predicted_units), 2)
     predicted_bill  = calculate_bill(predicted_units)
-    risk_level      = get_risk_level(predicted_units)
+    risk_level      = get_consumption_level(predicted_units)
 
     return {
         "predicted_units":     predicted_units,
         "predicted_bill":      predicted_bill,
-        "risk_level":          risk_level,
+        "consumption_level":   risk_level,
         "recommendations":     _generate_recommendations(payload, predicted_units, predicted_bill),
         "appliance_breakdown": _appliance_breakdown(payload, predicted_units),
     }

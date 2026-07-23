@@ -9,7 +9,7 @@ import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import RiskExplanation from '../components/RiskExplanation'
 
-const RISK_COLOR  = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444' }
+const RISK_COLOR  = { Low: '#10b981', Moderate: '#f59e0b', High: '#ef4444' }
 const PIE_COLORS  = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16']
 const APPL_LABELS = {
   air_conditioner: 'Air Conditioner', fans: 'Fans', refrigerator: 'Refrigerator',
@@ -48,7 +48,7 @@ function PredictionModal({ p, onClose }) {
             <div className="result-main-card" style={{ flex: 1, minWidth: 0 }}>
               <div className="result-units">{p.predicted_units} <span>kWh</span></div>
               <div className="result-bill">LKR {p.predicted_bill?.toLocaleString()}</div>
-              <span className={`badge badge-${p.risk_level?.toLowerCase()} badge-lg`}>{p.risk_level} Risk</span>
+              <span className={`badge badge-${p.consumption_level?.toLowerCase()} badge-lg`}>{p.consumption_level}</span>
             </div>
 
             {(p.avg_temp || p.avg_humidity) && (
@@ -101,7 +101,7 @@ function PredictionModal({ p, onClose }) {
             </div>
           )}
 
-          <RiskExplanation currentLevel={p.risk_level} predictedUnits={p.predicted_units} />
+          <RiskExplanation currentLevel={p.consumption_level} predictedUnits={p.predicted_units} />
 
           {/* Recommendations */}
           {p.recommendations?.length > 0 && (
@@ -201,7 +201,7 @@ export default function Dashboard() {
         <div className="stat-card stat-card-blue">
           <div className="stat-label">Latest Predicted Bill</div>
           <div className="stat-value">{latest ? `LKR ${latest.predicted_bill?.toLocaleString()}` : '—'}</div>
-          {latest && <span className={`badge badge-${latest.risk_level?.toLowerCase()}`}>{latest.risk_level} Risk</span>}
+          {latest && <span className={`badge badge-${latest.consumption_level?.toLowerCase()}`}>{latest.consumption_level}</span>}
         </div>
         <div className="stat-card stat-card-green">
           <div className="stat-label">Predicted Units</div>
@@ -312,7 +312,7 @@ export default function Dashboard() {
                           ) : '—'}
                         </td>
                         <td>
-                          <span className={`badge badge-${p.risk_level?.toLowerCase()}`}>{p.risk_level}</span>
+                          <span className={`badge badge-${p.consumption_level?.toLowerCase()}`}>{p.consumption_level}</span>
                         </td>
                         <td style={{ display: 'flex', gap: '.5rem' }}>
                           <button className="btn-view" onClick={() => setSelected(p)}>View</button>

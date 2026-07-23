@@ -8,7 +8,7 @@ const TIERS = [
     description: 'Cheapest CEB tariff. Unit rates are low and there is no high fixed charge.',
   },
   {
-    level: 'Medium',
+    level: 'Moderate',
     range: '61 – 180 kWh',
     schedule: 'Schedule 2',
     color: '#f59e0b',
@@ -28,11 +28,11 @@ const TIERS = [
 export default function RiskExplanation({ currentLevel, predictedUnits }) {
   return (
     <div className="risk-explanation">
-      <h4 className="risk-exp-title">📊 What does your risk level mean?</h4>
+      <h4 className="risk-exp-title">📊 What does your consumption level mean?</h4>
       <p className="risk-exp-sub">
-        EnergyWise uses the PUCSL 2026 CEB tariff schedules to classify risk.
+        EnergyWise uses the PUCSL 2026 CEB tariff schedules to classify your consumption level.
         Your predicted usage of <strong>{predictedUnits} kWh</strong> places you in the{' '}
-        <strong>{currentLevel} Risk</strong> category.
+        <strong>{currentLevel}</strong> consumption level.
       </p>
       <div className="risk-tier-list">
         {TIERS.map(t => {
@@ -44,7 +44,7 @@ export default function RiskExplanation({ currentLevel, predictedUnits }) {
               style={active ? { borderColor: t.color, background: t.bg } : {}}
             >
               <div className="risk-tier-header">
-                <span className={`badge badge-${t.level.toLowerCase()}`}>{t.level} Risk</span>
+                <span className={`badge badge-${t.level.toLowerCase()}`}>{t.level}</span>
                 <span className="risk-tier-range">{t.range}</span>
                 <span className="risk-tier-schedule">{t.schedule}</span>
                 {active && <span className="risk-tier-you">← You are here</span>}

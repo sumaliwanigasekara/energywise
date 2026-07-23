@@ -77,7 +77,7 @@ def predict():
         end_date=_parse_date(weather.get("period_end")),
         predicted_units=result["predicted_units"],
         predicted_bill=result["predicted_bill"],
-        risk_level=result["risk_level"],
+        consumption_level=result["consumption_level"],
         recommendations=result["recommendations"],
         appliance_breakdown=result["appliance_breakdown"],
     )
@@ -88,7 +88,7 @@ def predict():
         "prediction_id": prediction.id,
         "predicted_units": result["predicted_units"],
         "predicted_bill": result["predicted_bill"],
-        "risk_level": result["risk_level"],
+        "consumption_level": result["consumption_level"],
         "recommendations": result["recommendations"],
         "appliance_breakdown": result["appliance_breakdown"],
         "weather": weather,

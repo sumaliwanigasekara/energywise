@@ -40,7 +40,7 @@ class Prediction(db.Model):
     # ML outputs
     predicted_units = db.Column(db.Float)
     predicted_bill  = db.Column(db.Float)
-    risk_level      = db.Column(db.String(20))
+    consumption_level = db.Column(db.String(20))
     recommendations     = db.Column(db.JSON, nullable=True)
     appliance_breakdown = db.Column(db.JSON, nullable=True)
 
@@ -58,7 +58,7 @@ class Prediction(db.Model):
             "district": self.district,
             "predicted_units": round(self.predicted_units, 2) if self.predicted_units else 0,
             "predicted_bill":  round(self.predicted_bill,  2) if self.predicted_bill  else 0,
-            "risk_level": self.risk_level,
+            "consumption_level": self.consumption_level,
             "avg_temp":    self.avg_temp,
             "avg_humidity": self.avg_humidity,
             "total_precip": self.total_precip,

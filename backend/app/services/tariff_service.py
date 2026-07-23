@@ -71,11 +71,11 @@ def calculate_bill(units: float) -> float:
     return round(energy_charge + fixed_charge, 2)
 
 
-def get_risk_level(units: float) -> str:
+def get_consumption_level(units: float) -> str:
     if units <= 60:
         return "Low"
     elif units <= 180:
-        return "Medium"
+        return "Moderate"
     return "High"
 
 

@@ -31,8 +31,8 @@ def stats():
     avg_units = db.session.query(func.avg(Prediction.predicted_units)).scalar() or 0
 
     risk_dist = (
-        db.session.query(Prediction.risk_level, func.count(Prediction.id))
-        .group_by(Prediction.risk_level)
+        db.session.query(Prediction.consumption_level, func.count(Prediction.id))
+        .group_by(Prediction.consumption_level)
         .all()
     )
 

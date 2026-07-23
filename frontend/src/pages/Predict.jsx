@@ -265,8 +265,8 @@ export default function Predict() {
             <div className="result-main-card">
               <div className="result-units">{result.predicted_units} <span>kWh</span></div>
               <div className="result-bill">LKR {result.predicted_bill?.toLocaleString()}</div>
-              <span className={`badge badge-${result.risk_level?.toLowerCase()} badge-lg`}>
-                {result.risk_level} Risk
+              <span className={`badge badge-${result.consumption_level?.toLowerCase()} badge-lg`}>
+                {result.consumption_level}
               </span>
             </div>
 
@@ -283,7 +283,7 @@ export default function Predict() {
             )}
           </div>
 
-          <RiskExplanation currentLevel={result.risk_level} predictedUnits={result.predicted_units} />
+          <RiskExplanation currentLevel={result.consumption_level} predictedUnits={result.predicted_units} />
 
           <div className="charts-row">
             <div className="chart-card">
