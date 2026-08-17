@@ -140,13 +140,13 @@ export default function Appliances() {
               <span className="ac-unit-label">AC {i + 1}</span>
 
               <div className="ac-unit-field">
-                <label>Capacity (tons)</label>
+                <label>AC Size</label>
                 <select value={unit.tons} onChange={e => setAC(i, 'tons', e.target.value)}>
-                  <option value="0.75">0.75 ton</option>
-                  <option value="1.0">1.0 ton</option>
-                  <option value="1.5">1.5 ton</option>
-                  <option value="2.0">2.0 ton</option>
-                  <option value="2.5">2.5 ton</option>
+                  <option value="0.75">Small room — 0.75 ton</option>
+                  <option value="1.0">Medium room — 1.0 ton</option>
+                  <option value="1.5">Large room — 1.5 ton</option>
+                  <option value="2.0">Very large room — 2.0 ton</option>
+                  <option value="2.5">Hall / open area — 2.5 ton</option>
                 </select>
               </div>
 
@@ -209,7 +209,8 @@ export default function Appliances() {
 
       <div className="card tip-card">
         <strong>💡 Tip:</strong> Enter how many hours per day you typically use each appliance.
-        For ACs with different sizes, add them one by one using the "+ Add AC" button.
+        For AC size, select based on room size — check the sticker on your AC unit if unsure.
+        For multiple ACs, add them one by one using the "+ Add AC" button.
         The system automatically calculates monthly usage (daily × 30).
       </div>
     </div>
