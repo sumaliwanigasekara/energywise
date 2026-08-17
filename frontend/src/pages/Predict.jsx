@@ -116,7 +116,8 @@ export default function Predict() {
   const handleSubmit = async e => {
     e.preventDefault()
     if (!profile) {
-      navigate('/appliances')
+      setError('No appliance profile found. Please set up your appliances first.')
+      setTimeout(() => navigate('/appliances'), 2000)
       return
     }
     setError('')
