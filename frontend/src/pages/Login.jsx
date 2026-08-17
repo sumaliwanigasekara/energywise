@@ -7,17 +7,20 @@ export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
     try {
       const user = await login(form.email, form.password)
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+      setSuccess(`Welcome back, ${user.name}!`)
+      setTimeout(() => navigate(user.role === 'admin' ? '/admin' : '/dashboard'), 1000)
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.')
+      setError(err.response?.data?.error || 'Incorrect email or password. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -34,6 +37,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="auth-form">
           <h2>Sign In</h2>
           {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
           <div className="form-group">
             <label>Email Address</label>
             <input
@@ -51,6 +55,7 @@ export default function Login() {
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
               placeholder="Enter your password"
+              autoComplete="current-password"
               required
             />
           </div>

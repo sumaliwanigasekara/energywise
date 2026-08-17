@@ -9,11 +9,13 @@ export default function Register() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', district: 'Colombo' })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters.')
       return
@@ -21,7 +23,8 @@ export default function Register() {
     setLoading(true)
     try {
       await register(form.name, form.email, form.password, form.district)
-      navigate('/appliances')
+      setSuccess('Account created successfully! Setting up your profile...')
+      setTimeout(() => navigate('/appliances'), 1200)
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.')
     } finally {
@@ -40,6 +43,7 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="auth-form">
           <h2>Create Account</h2>
           {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
           <div className="form-group">
             <label>Full Name</label>
             <input
@@ -67,6 +71,7 @@ export default function Register() {
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
               placeholder="At least 6 characters"
+              autoComplete="new-password"
               required
             />
           </div>
