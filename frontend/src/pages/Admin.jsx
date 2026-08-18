@@ -4,7 +4,125 @@ import api from '../services/api'
 
 const RISK_COLORS = { Low: '#10b981', Moderate: '#f59e0b', High: '#ef4444' }
 
-function UserPredictions({ userId, onCountChange }) {
+function PredictionModal({ prediction: p, onClose }) {
+  if (!p) return null
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+    }} onClick={onClose}>
+      <div style={{
+        background: '#fff', borderRadius: '12px', padding: '1.5rem',
+        maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Prediction #{p.id} — {new Date(p.created_at).toLocaleDateString('en-GB')}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+        </div>
+
+        {/* Result */}
+        <div style={{ background: '#1e3a5f', color: '#fff', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>{p.predicted_units} kWh</div>
+          <div style={{ fontSize: '1.1rem' }}>LKR {p.predicted_bill?.toLocaleString()}</div>
+          <span className={`badge badge-${p.consumption_level?.toLowerCase()}`} style={{ marginTop: '.4rem', display: 'inline-block' }}>
+            {p.consumption_level}
+          </span>
+        </div>
+
+        {/* Previous Bills */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ marginBottom: '.5rem', color: '#374151' }}>📋 Previous Bills Entered</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.5rem' }}>
+            {[['Last Month', p.prev_bill_1], ['2 Months Ago', p.prev_bill_2], ['3 Months Ago', p.prev_bill_3]].map(([label, val]) => (
+              <div key={label} style={{ background: '#f8fafc', borderRadius: '6px', padding: '.6rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '.75rem', color: '#64748b' }}>{label}</div>
+                <div style={{ fontWeight: 600 }}>{val > 0 ? `${val} kWh` : '—'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Household */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ marginBottom: '.5rem', color: '#374151' }}>👨‍👩‍👧 Household</h4>
+          <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.6rem' }}>
+            <span style={{ marginRight: '1.5rem' }}><strong>Members:</strong> {p.members}</span>
+            <span><strong>District:</strong> {p.district}</span>
+          </div>
+        </div>
+
+        {/* Appliances */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ marginBottom: '.5rem', color: '#374151' }}>🔌 Appliance Profile Used</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+            {p.ac_count > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                ❄️ <strong>AC:</strong> {p.ac_count} unit(s) · {p.ac_tons} ton · {+(p.ac_hours_per_month / 30).toFixed(1)} h/day
+              </div>
+            )}
+            {p.fan_count > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                🌀 <strong>Fan:</strong> {p.fan_count} unit(s)
+              </div>
+            )}
+            {p.fridge_count > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                🧊 <strong>Fridge:</strong> {p.fridge_count} unit(s) — 24/7
+              </div>
+            )}
+            {p.washer_hours_per_month > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                🫧 <strong>Washing Machine:</strong> {+(p.washer_hours_per_month / 4).toFixed(1)} h/week
+              </div>
+            )}
+            {p.heater_hours_per_month > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                🚿 <strong>Water Heater:</strong> {+(p.heater_hours_per_month / 4).toFixed(1)} h/week
+              </div>
+            )}
+            {p.other_hours_per_month > 0 && (
+              <div style={{ background: '#f8fafc', borderRadius: '6px', padding: '.5rem .8rem', fontSize: '.88rem' }}>
+                🔌 <strong>Other:</strong> {+(p.other_hours_per_month / 30).toFixed(1)} h/day
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Weather */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ marginBottom: '.5rem', color: '#374151' }}>🌤️ Weather Data (30-day avg)</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
+            {[
+              ['🌡️ Avg Temp', `${p.avg_temp}°C`],
+              ['💧 Humidity', `${p.avg_humidity}%`],
+              ['🌧️ Precipitation', `${p.total_precip} mm`],
+              ['💨 Wind', `${p.avg_wind} km/h`],
+            ].map(([label, val]) => (
+              <div key={label} style={{ background: '#f0f9ff', borderRadius: '6px', padding: '.6rem', fontSize: '.88rem' }}>
+                <span style={{ color: '#64748b' }}>{label}</span>
+                <div style={{ fontWeight: 600 }}>{val ?? '—'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Actual bill if provided */}
+        {p.actual_units != null && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '.75rem', marginBottom: '1rem' }}>
+            <strong>✅ Actual Bill Recorded:</strong> {p.actual_units} kWh · LKR {p.actual_bill?.toLocaleString()}
+            <div style={{ fontSize: '.82rem', color: '#16a34a', marginTop: '.3rem' }}>
+              Accuracy: {Math.max(0, (1 - Math.abs(p.predicted_units - p.actual_units) / p.actual_units) * 100).toFixed(1)}%
+            </div>
+          </div>
+        )}
+
+        <button onClick={onClose} className="btn-primary btn-full" style={{ marginTop: '.5rem' }}>Close</button>
+      </div>
+    </div>
+  )
+}
+
+function UserPredictions({ userId, onCountChange, onView }) {
   const [predictions, setPredictions] = useState(null)
   const [deleting, setDeleting] = useState(null)
 
@@ -49,7 +167,14 @@ function UserPredictions({ userId, onCountChange }) {
         </span>
       </td>
       <td style={{ fontSize: '.82rem', color: '#64748b' }}>{p.district}</td>
-      <td>
+      <td style={{ display: 'flex', gap: '.3rem' }}>
+        <button
+          className="btn-outline"
+          onClick={() => onView(p)}
+          style={{ fontSize: '.75rem', padding: '.2rem .6rem' }}
+        >
+          View
+        </button>
         <button
           className="btn-danger-sm"
           onClick={() => handleDelete(p.id)}
@@ -73,6 +198,7 @@ export default function Admin() {
   const [deleting, setDeleting] = useState(null)
   const [expandedUser, setExpandedUser] = useState(null)
   const [predCounts, setPredCounts] = useState({})
+  const [viewingPrediction, setViewingPrediction] = useState(null)
 
   const loadData = async p => {
     setLoading(true)
@@ -127,6 +253,8 @@ export default function Admin() {
           <p className="text-muted">Manage consumers and view system statistics</p>
         </div>
       </div>
+
+      <PredictionModal prediction={viewingPrediction} onClose={() => setViewingPrediction(null)} />
 
       {loading ? (
         <div className="loading-box">Loading...</div>
@@ -229,6 +357,7 @@ export default function Admin() {
                         <UserPredictions
                           userId={u.id}
                           onCountChange={setter => setPredCounts(c => ({ ...c, [u.id]: setter(c[u.id] ?? 0) }))}
+                          onView={setViewingPrediction}
                         />
                       )}
                     </>
