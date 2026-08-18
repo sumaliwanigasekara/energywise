@@ -320,6 +320,23 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                     "icon": "plug",
                     "priority": "high",
                 })
+        else:
+            # No high-consumption appliances to cut, but user is still above a boundary —
+            # show an awareness card so they know dropping usage has a big payoff
+            recs.append({
+                "title": f"You are {round(gap, 1)} kWh above a lower tariff schedule (save LKR {bill_saving_lkr:,.0f})",
+                "description": (
+                    f"Crossing back below {target_boundary} kWh would recalculate your entire bill "
+                    f"at lower CEB rates, saving LKR {bill_saving_lkr:,.0f} this month. "
+                    f"Small reductions across lighting, standby devices, and general usage "
+                    f"could get you back into the lower schedule."
+                ),
+                "category": "Tariff Boundary",
+                "saving_kwh": round(gap + 1, 1),
+                "saving_lkr": bill_saving_lkr,
+                "icon": "plug",
+                "priority": "high",
+            })
 
     # ------------------------------------------------------------------
     # STEP 4 — Individual appliance recommendations
