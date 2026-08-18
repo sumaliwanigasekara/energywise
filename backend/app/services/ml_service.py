@@ -301,24 +301,25 @@ def _generate_recommendations(data: dict, units: float, bill: float) -> list:
                 "icon": "plug",
                 "priority": "high",
             })
-        else:
-            # User cannot fully cross but can still reduce significantly
+        elif total_reducible > 0:
+            # User cannot fully cross but can still reduce partially
             partial_saving = calculate_bill(units - total_reducible)
             partial_lkr = round(bill - partial_saving, 2)
-            recs.append({
-                "title": f"Reduce your bill by LKR {partial_lkr:,.0f} with simple habit changes",
-                "description": (
-                    f"You need to save {round(gap, 1)} kWh to drop to a lower CEB tariff schedule "
-                    f"(saving LKR {bill_saving_lkr:,.0f}), but your current reducible usage is "
-                    f"{round(total_reducible, 1)} kWh. While you may not cross the boundary this "
-                    f"month, applying all habit changes below can still save LKR {partial_lkr:,.0f}."
-                ),
-                "category": "Tariff Boundary",
-                "saving_kwh": round(total_reducible, 1),
-                "saving_lkr": partial_lkr,
-                "icon": "plug",
-                "priority": "high",
-            })
+            if partial_lkr > 0:
+                recs.append({
+                    "title": f"Reduce your bill by LKR {partial_lkr:,.0f} with simple habit changes",
+                    "description": (
+                        f"You need to save {round(gap, 1)} kWh to drop to a lower CEB tariff schedule "
+                        f"(saving LKR {bill_saving_lkr:,.0f}), but your current reducible usage is "
+                        f"{round(total_reducible, 1)} kWh. While you may not cross the boundary this "
+                        f"month, applying all habit changes below can still save LKR {partial_lkr:,.0f}."
+                    ),
+                    "category": "Tariff Boundary",
+                    "saving_kwh": round(total_reducible, 1),
+                    "saving_lkr": partial_lkr,
+                    "icon": "plug",
+                    "priority": "high",
+                })
 
     # ------------------------------------------------------------------
     # STEP 4 — Individual appliance recommendations
