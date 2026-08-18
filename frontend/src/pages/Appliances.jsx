@@ -2,39 +2,51 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 
 const OTHER_APPLIANCES = [
-  { key: 'fan',    label: 'Ceiling / Table Fan', icon: '🌀', countField: 'fan_count',    hoursField: 'fan_hours_per_day',     desc: 'Total fans in household' },
-  { key: 'fridge', label: 'Refrigerator',         icon: '🧊', countField: 'fridge_count', hoursField: null,                    desc: 'Runs 24/7 automatically' },
-  { key: 'washer', label: 'Washing Machine',       icon: '🫧', countField: null,           hoursField: 'washer_hours_per_day',  desc: 'Average daily usage hours' },
-  { key: 'heater', label: 'Water Heater',          icon: '🚿', countField: null,           hoursField: 'heater_hours_per_day',  desc: 'Average daily usage hours' },
-  { key: 'other',  label: 'Other Appliances',      icon: '🔌', countField: null,           hoursField: 'other_hours_per_day',   desc: 'TV, iron, microwave, etc.' },
+  { key: 'fan',    label: 'Ceiling / Table Fan', icon: '🌀', countField: 'fan_count',    hoursField: 'fan_hours_per_day',      desc: 'Total fans in household',        hoursLabel: 'Hours used per day' },
+  { key: 'fridge', label: 'Refrigerator',         icon: '🧊', countField: 'fridge_count', hoursField: null,                     desc: 'Runs 24/7 automatically',        hoursLabel: null },
+  { key: 'washer', label: 'Washing Machine',       icon: '🫧', countField: null,           hoursField: 'washer_hours_per_week',  desc: 'How many hours per week total',  hoursLabel: 'Hours used per week' },
+  { key: 'heater', label: 'Water Heater',          icon: '🚿', countField: null,           hoursField: 'heater_hours_per_week',  desc: 'How many hours per week total',  hoursLabel: 'Hours used per week' },
+  { key: 'other',  label: 'Other Appliances',      icon: '🔌', countField: null,           hoursField: 'other_hours_per_day',    desc: 'TV, iron, microwave, etc.',      hoursLabel: 'Hours used per day' },
 ]
 
-const HOUR_FIELDS = ['fan_hours_per_day', 'washer_hours_per_day', 'heater_hours_per_day', 'other_hours_per_day']
+// Fields stored as daily rate (×30 → monthly)
+const DAILY_FIELDS  = ['fan_hours_per_day', 'other_hours_per_day']
+// Fields stored as weekly rate (×4 → monthly)
+const WEEKLY_FIELDS = ['washer_hours_per_week', 'heater_hours_per_week']
 
 const DEFAULT = {
   fan_count: 0, fan_hours_per_day: 0,
   fridge_count: 1,
-  washer_hours_per_day: 0,
-  heater_hours_per_day: 0,
+  washer_hours_per_week: 0,
+  heater_hours_per_week: 0,
   other_hours_per_day: 0,
 }
 
 const DEFAULT_AC = { tons: 1.5, hours_per_day: 0 }
 
-function toDaily(profile) {
+function fromMonthly(profile) {
   const out = { ...profile }
-  HOUR_FIELDS.forEach(f => {
+  DAILY_FIELDS.forEach(f => {
     const monthly = f.replace('_per_day', '_per_month')
     out[f] = profile[monthly] != null ? +(profile[monthly] / 30).toFixed(1) : 0
+  })
+  WEEKLY_FIELDS.forEach(f => {
+    const monthly = f.replace('_per_week', '_per_month')
+    out[f] = profile[monthly] != null ? +(profile[monthly] / 4).toFixed(1) : 0
   })
   return out
 }
 
 function toMonthly(profile) {
   const out = { ...profile }
-  HOUR_FIELDS.forEach(f => {
+  DAILY_FIELDS.forEach(f => {
     const monthly = f.replace('_per_day', '_per_month')
     out[monthly] = Math.round((profile[f] || 0) * 30)
+    delete out[f]
+  })
+  WEEKLY_FIELDS.forEach(f => {
+    const monthly = f.replace('_per_week', '_per_month')
+    out[monthly] = Math.round((profile[f] || 0) * 4)
     delete out[f]
   })
   return out
@@ -52,7 +64,7 @@ export default function Appliances() {
     api.get('/appliances')
       .then(r => {
         const d = r.data
-        setProfile(toDaily(d))
+        setProfile(fromMonthly(d))
         // Restore individual AC list, or build a single entry from aggregated values
         if (d.ac_units && d.ac_units.length > 0) {
           setAcUnits(d.ac_units)
@@ -193,7 +205,7 @@ export default function Appliances() {
 
             {app.hoursField && (
               <div className="appliance-row">
-                <label>Hours used per day</label>
+                <label>{app.hoursLabel}</label>
                 <input
                   type="number" min="0" max="24" step="0.5"
                   value={profile[app.hoursField] || ''}

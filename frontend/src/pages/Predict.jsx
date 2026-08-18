@@ -53,14 +53,14 @@ function ProfileSummary({ profile }) {
         <div className="profile-summary-group">
           <span className="ps-icon">🫧</span>
           <span className="ps-label">Washing Machine</span>
-          <span className="ps-value">{+(profile.washer_hours_per_month / 30).toFixed(1)} h/day</span>
+          <span className="ps-value">{+(profile.washer_hours_per_month / 4).toFixed(1)} h/week</span>
         </div>
       )}
       {profile.heater_hours_per_month > 0 && (
         <div className="profile-summary-group">
           <span className="ps-icon">🚿</span>
           <span className="ps-label">Water Heater</span>
-          <span className="ps-value">{+(profile.heater_hours_per_month / 30).toFixed(1)} h/day</span>
+          <span className="ps-value">{+(profile.heater_hours_per_month / 4).toFixed(1)} h/week</span>
         </div>
       )}
       {profile.other_hours_per_month > 0 && (
