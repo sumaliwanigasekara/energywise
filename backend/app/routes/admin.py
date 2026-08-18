@@ -102,3 +102,23 @@ def get_all_predictions():
         "total": predictions.total,
         "pages": predictions.pages,
     }), 200
+
+
+@admin_bp.route("/users/<int:user_id>/predictions", methods=["GET"])
+@admin_required
+def get_user_predictions(user_id):
+    predictions = (
+        Prediction.query.filter_by(user_id=user_id)
+        .order_by(Prediction.created_at.desc())
+        .all()
+    )
+    return jsonify({"predictions": [p.to_dict() for p in predictions]}), 200
+
+
+@admin_bp.route("/predictions/<int:prediction_id>", methods=["DELETE"])
+@admin_required
+def delete_prediction(prediction_id):
+    prediction = Prediction.query.get_or_404(prediction_id)
+    db.session.delete(prediction)
+    db.session.commit()
+    return jsonify({"message": "Prediction deleted"}), 200
