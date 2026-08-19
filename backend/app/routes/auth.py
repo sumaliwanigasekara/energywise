@@ -1,7 +1,10 @@
-from flask import Blueprint, request, jsonify
+import secrets, hashlib
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from app.extensions import db
+from flask_mail import Message
+from app.extensions import db, mail
 from app.models.user import User
+from app.models.reset_token import PasswordResetToken
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -76,3 +79,74 @@ def change_password():
     user.password_hash = bcrypt.generate_password_hash(new_pw).decode("utf-8")
     db.session.commit()
     return jsonify({"message": "Password changed successfully"}), 200
+
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    email = (request.get_json() or {}).get("email", "").strip().lower()
+    user = User.query.filter_by(email=email).first()
+    # Always return 200 to avoid revealing whether email exists
+    if not user:
+        return jsonify({"message": "If that email is registered, a reset link has been sent."}), 200
+
+    # Delete any existing tokens for this user
+    PasswordResetToken.query.filter_by(user_id=user.id).delete()
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    reset = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=PasswordResetToken.make_expiry(),
+    )
+    db.session.add(reset)
+    db.session.commit()
+
+    frontend_url = current_app.config.get("FRONTEND_URL", "http://129.159.226.68:8080")
+    reset_link = f"{frontend_url}/reset-password?token={raw_token}"
+
+    msg = Message(
+        subject="EnergyWise — Reset Your Password",
+        recipients=[user.email],
+        html=f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:auto">
+          <h2 style="color:#2563eb">⚡ EnergyWise</h2>
+          <p>Hi {user.name},</p>
+          <p>We received a request to reset your password. Click the button below to set a new password.
+             This link expires in <strong>1 hour</strong>.</p>
+          <a href="{reset_link}"
+             style="display:inline-block;background:#2563eb;color:#fff;padding:.75rem 1.5rem;
+                    border-radius:6px;text-decoration:none;font-weight:600;margin:1rem 0">
+            Reset Password
+          </a>
+          <p style="color:#64748b;font-size:.85rem">
+            If you didn't request this, ignore this email — your password won't change.
+          </p>
+        </div>
+        """,
+    )
+    mail.send(msg)
+    return jsonify({"message": "If that email is registered, a reset link has been sent."}), 200
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    data = request.get_json() or {}
+    raw_token = data.get("token", "")
+    new_pw    = data.get("new_password", "")
+
+    if len(new_pw) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    reset = PasswordResetToken.query.filter_by(token_hash=token_hash).first()
+
+    if not reset or reset.is_expired():
+        return jsonify({"error": "Reset link is invalid or has expired"}), 400
+
+    user = User.query.get(reset.user_id)
+    from app.extensions import bcrypt
+    user.password_hash = bcrypt.generate_password_hash(new_pw).decode("utf-8")
+    db.session.delete(reset)
+    db.session.commit()
+    return jsonify({"message": "Password reset successfully. You can now log in."}), 200

@@ -7,7 +7,7 @@ load_dotenv(dotenv_path=env_path)
 
 from flask import Flask
 from config import Config
-from app.extensions import db, jwt, bcrypt, cors
+from app.extensions import db, jwt, bcrypt, cors, mail
 
 
 def create_app():
@@ -18,6 +18,7 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    mail.init_app(app)
 
     from app.routes.auth import auth_bp
     from app.routes.predict import predict_bp
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(appliances_bp, url_prefix="/api")
 
     with app.app_context():
+        from app.models import reset_token  # ensure table is created
         db.create_all()
         _seed_admin(app)
 
