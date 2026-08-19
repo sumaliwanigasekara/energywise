@@ -51,3 +51,28 @@ def me():
     user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
     return jsonify({"user": user.to_dict()}), 200
+
+
+@auth_bp.route("/change-password", methods=["PUT"])
+@jwt_required()
+def change_password():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    current = data.get("current_password", "")
+    new_pw  = data.get("new_password", "")
+
+    if not user.check_password(current):
+        return jsonify({"error": "Current password is incorrect"}), 400
+
+    if len(new_pw) < 6:
+        return jsonify({"error": "New password must be at least 6 characters"}), 400
+
+    if current == new_pw:
+        return jsonify({"error": "New password must be different from current password"}), 400
+
+    from app.extensions import bcrypt
+    user.password_hash = bcrypt.generate_password_hash(new_pw).decode("utf-8")
+    db.session.commit()
+    return jsonify({"message": "Password changed successfully"}), 200
