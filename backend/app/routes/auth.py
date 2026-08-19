@@ -125,7 +125,10 @@ def forgot_password():
         </div>
         """,
     )
-    mail.send(msg)
+    try:
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send reset email: {e}")
     return jsonify({"message": "If that email is registered, a reset link has been sent."}), 200
 
 

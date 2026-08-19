@@ -140,11 +140,6 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(null)
   const [actualInput, setActualInput] = useState({})   // {id: value}
   const [savingActual, setSavingActual] = useState(null)
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' })
-  const [pwShow, setPwShow] = useState({ current: false, newPw: false, confirm: false })
-  const [pwError, setPwError] = useState('')
-  const [pwSuccess, setPwSuccess] = useState('')
-  const [pwSaving, setPwSaving] = useState(false)
 
   useEffect(() => {
     api.get('/predictions?per_page=10')
@@ -174,27 +169,6 @@ export default function Dashboard() {
       alert('Failed to save. Please try again.')
     } finally {
       setSavingActual(null)
-    }
-  }
-
-  const handleChangePassword = async e => {
-    e.preventDefault()
-    setPwError('')
-    setPwSuccess('')
-    if (pwForm.newPw !== pwForm.confirm) {
-      setPwError('New passwords do not match.')
-      return
-    }
-    setPwSaving(true)
-    try {
-      await api.put('/auth/change-password', { current_password: pwForm.current, new_password: pwForm.newPw })
-      setPwSuccess('Password changed successfully!')
-      setPwForm({ current: '', newPw: '', confirm: '' })
-      setTimeout(() => setPwSuccess(''), 4000)
-    } catch (err) {
-      setPwError(err.response?.data?.error || 'Failed to change password.')
-    } finally {
-      setPwSaving(false)
     }
   }
 
@@ -356,44 +330,6 @@ export default function Dashboard() {
           </div>
         </>
       )}
-
-      {/* Security */}
-      <div className="card" style={{ maxWidth: '480px' }}>
-        <h3 style={{ marginBottom: '.25rem' }}>🔒 Security</h3>
-        <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '.88rem' }}>Change your account password</p>
-        <form onSubmit={handleChangePassword}>
-          {pwError   && <div className="alert alert-error"   style={{ marginBottom: '.75rem' }}>{pwError}</div>}
-          {pwSuccess && <div className="alert alert-success" style={{ marginBottom: '.75rem' }}>{pwSuccess}</div>}
-          {[
-            { key: 'current', label: 'Current Password' },
-            { key: 'newPw',   label: 'New Password' },
-            { key: 'confirm', label: 'Confirm New Password' },
-          ].map(({ key, label }) => (
-            <div className="form-group" key={key}>
-              <label>{label}</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={pwShow[key] ? 'text' : 'password'}
-                  value={pwForm[key]}
-                  onChange={e => setPwForm(f => ({ ...f, [key]: e.target.value }))}
-                  placeholder={key === 'current' ? 'Enter current password' : 'At least 6 characters'}
-                  autoComplete={key === 'current' ? 'current-password' : 'new-password'}
-                  required
-                  style={{ paddingRight: '2.5rem', width: '100%', boxSizing: 'border-box' }}
-                />
-                <button type="button" tabIndex={-1}
-                  onClick={() => setPwShow(s => ({ ...s, [key]: !s[key] }))}
-                  style={{ position: 'absolute', right: '.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1rem', padding: 0 }}>
-                  {pwShow[key] ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-          ))}
-          <button type="submit" className="btn-primary btn-full" disabled={pwSaving}>
-            {pwSaving ? 'Changing...' : 'Change Password'}
-          </button>
-        </form>
-      </div>
 
       <PredictionModal p={selected} onClose={() => setSelected(null)} />
     </div>

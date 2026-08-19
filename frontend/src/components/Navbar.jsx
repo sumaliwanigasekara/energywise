@@ -27,6 +27,9 @@ export default function Navbar() {
           <NavLink to="/predict" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             Predict Bill
           </NavLink>
+          <NavLink to="/security" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+            Security
+          </NavLink>
           {user?.role === 'admin' && (
             <NavLink to="/admin" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
               Admin

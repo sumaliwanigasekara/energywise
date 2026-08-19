@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import Appliances from './pages/Appliances'
 import Predict from './pages/Predict'
 import Admin from './pages/Admin'
+import Security from './pages/Security'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/appliances" element={<Appliances />} />
               <Route path="/predict" element={<Predict />} />
+              <Route path="/security" element={<Security />} />
             </Route>
           </Route>
 
