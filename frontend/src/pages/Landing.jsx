@@ -2,20 +2,20 @@ import { Link } from 'react-router-dom'
 
 const FEATURES = [
   { icon: '🔮', title: 'AI-Powered Predictions', desc: 'Our ensemble ML model predicts your monthly electricity bill before it arrives, trained on 40,000+ real household records.' },
-  { icon: '🌤️', title: 'Weather-Aware', desc: 'Integrates live weather data — temperature, humidity, precipitation — because Sri Lanka\'s climate directly drives your electricity usage.' },
+  { icon: '🌤️', title: 'Weather-Aware', desc: 'Integrates live weather data — temperature, humidity, precipitation - because Sri Lanka\'s climate directly drives your electricity usage.' },
   { icon: '💡', title: 'Smart Recommendations', desc: 'Get personalised tips on which appliances to reduce and how much you could save in LKR on your next bill.' },
   { icon: '📊', title: 'Track Your History', desc: 'Log actual bills against predictions, see accuracy over time, and spot trends in your household energy usage.' },
 ]
 
 const STATS = [
-  { value: 'AI', label: 'Powered Predictions', sub: 'Built on real machine learning — not just a formula' },
-  { value: '40K+', label: 'Real Households', sub: 'Trained on actual CEB electricity records' },
+  { value: 'AI', label: 'Powered Predictions', sub: 'Built on real machine learning - not just a formula' },
+  { value: '40K+', label: 'Real Households Consumption Bills', sub: 'Trained on actual CEB electricity records' },
   { value: 'Live', label: 'Weather Integration', sub: 'Real-time conditions factored into every prediction' },
-  { value: '8+', label: 'Districts Covered', sub: 'Colombo areas now — expanding island-wide' },
+  { value: '8+', label: 'Areas Covered', sub: 'Colombo areas now - expanding island-wide' },
 ]
 
 const WHY = [
-  { icon: '⚡', title: 'Rising Tariffs', desc: 'Sri Lanka\'s CEB electricity tariffs have multiple progressive slabs — a small increase in usage can push you into a much higher billing tier.' },
+  { icon: '⚡', title: 'Rising Tariffs', desc: 'Sri Lanka\'s CEB electricity tariffs have multiple progressive slabs - a small increase in usage can push you into a much higher billing tier.' },
   { icon: '🏠', title: 'Hidden Usage', desc: 'Most households don\'t realise how much air conditioners, water heaters, and fridges contribute to their bill until it\'s too late.' },
   { icon: '🌿', title: 'Environmental Impact', desc: 'Reducing household consumption directly lowers demand on the national grid, cutting carbon emissions and supporting a greener Sri Lanka.' },
 ]
