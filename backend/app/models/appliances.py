@@ -14,11 +14,11 @@ class UserAppliances(db.Model):
     fan_count = db.Column(db.Integer, default=0)
     fan_hours_per_month = db.Column(db.Float, default=0)
 
-    # Aggregated AC fields (computed from ac_units, kept for ML compatibility)
+    # Aggregated AC fields 
     ac_count = db.Column(db.Integer, default=0)
     ac_hours_per_month = db.Column(db.Float, default=0)
     ac_tons = db.Column(db.Float, default=1.5)
-    # Individual AC configurations: [{"tons": 1.5, "hours_per_day": 6}, ...]
+    # Individual AC configurations: 
     ac_units = db.Column(db.JSON, nullable=True)
 
     fridge_count = db.Column(db.Integer, default=1)

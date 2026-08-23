@@ -85,7 +85,7 @@ class TestNegativeUnitsHandledSafely:
 
 
 # ---------------------------------------------------------------------------
-# Bonus coverage: tier label boundaries (supports NFR-03's cross-check claim
+# TAR4: tier label boundaries (supports NFR-03's cross-check claim
 # that boundary values match the PUCSL 2026 schedule exactly)
 # ---------------------------------------------------------------------------
 class TestTierLabelBoundaries:
