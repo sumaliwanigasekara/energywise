@@ -25,7 +25,8 @@ export default function ForgotPassword() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-header">
+        <div className="auth-header" style={{ position: 'relative' }}>
+          <Link to="/" style={{ position: 'absolute', top: '1rem', left: '1rem', color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '.82rem' }}>← Home</Link>
           <span className="auth-logo">⚡</span>
           <h1>EnergyWise</h1>
           <p>Predict your electricity bill before it arrives</p>
