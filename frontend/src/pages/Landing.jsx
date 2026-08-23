@@ -8,10 +8,10 @@ const FEATURES = [
 ]
 
 const STATS = [
-  { value: '88.6%', label: 'Model Accuracy (R²)', sub: 'Ensemble RF + XGBoost' },
-  { value: '40K+', label: 'Training Records', sub: 'Real CEB household data' },
-  { value: '8', label: 'Colombo Districts', sub: 'Covered with weather data' },
-  { value: '~18 kWh', label: 'Mean Prediction Error', sub: 'On unseen test data' },
+  { value: 'AI', label: 'Powered Predictions', sub: 'Built on real machine learning — not just a formula' },
+  { value: '40K+', label: 'Real Households', sub: 'Trained on actual CEB electricity records' },
+  { value: 'Live', label: 'Weather Integration', sub: 'Real-time conditions factored into every prediction' },
+  { value: '8+', label: 'Districts Covered', sub: 'Colombo areas now — expanding island-wide' },
 ]
 
 const WHY = [
@@ -115,21 +115,21 @@ export default function Landing() {
             }}>Sign In</Link>
           </div>
 
-          {/* hero visual */}
-          <div style={{
-            marginTop: '4rem', background: 'rgba(255,255,255,0.07)',
-            borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)',
-            padding: '2rem', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem',
-          }}>
+          {/* hero feature pills */}
+          <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
-              { label: 'Predicted Bill', value: 'LKR 8,450', color: '#34d399', icon: '📋' },
-              { label: 'Predicted Units', value: '187 kWh', color: '#60a5fa', icon: '⚡' },
-              { label: 'Risk Level', value: 'Moderate', color: '#fbbf24', icon: '📊' },
-            ].map((item, i) => (
-              <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.8rem', marginBottom: '.4rem' }}>{item.icon}</div>
-                <div style={{ color: item.color, fontWeight: 700, fontSize: '1.25rem' }}>{item.value}</div>
-                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '.8rem', marginTop: '.2rem' }}>{item.label}</div>
+              { icon: '🤖', text: 'AI-Powered' },
+              { icon: '🌤️', text: 'Live Weather Data' },
+              { icon: '💡', text: 'Personalised Tips' },
+              { icon: '📊', text: 'Track Your Bills' },
+            ].map((p, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: '.5rem',
+                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: '999px', padding: '.45rem 1.1rem', color: '#fff',
+                fontSize: '.9rem', fontWeight: 500,
+              }}>
+                <span>{p.icon}</span> {p.text}
               </div>
             ))}
           </div>
@@ -149,6 +149,34 @@ export default function Landing() {
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '.82rem', marginTop: '.2rem' }}>{s.sub}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── IMAGE GALLERY ────────────────────────────── */}
+      <section style={{ padding: '5rem 2rem', background: '#fff' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <h2 style={{ fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 800, letterSpacing: '-0.5px' }}>
+              The Reality of Rising Energy Costs
+            </h2>
+            <p style={{ color: '#64748b', marginTop: '.75rem', fontSize: '1.05rem', maxWidth: '560px', margin: '.75rem auto 0' }}>
+              Millions of households across Sri Lanka struggle with unpredictable electricity bills every month.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: '1rem' }}>
+            <div style={{ gridRow: '1 / 3', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+              <img src="/images/img3.jpg" alt="Power transmission towers at sunset"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            </div>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+              <img src="/images/img1.jpg" alt="Stressed household over rising electricity bill"
+                style={{ width: '100%', height: '260px', objectFit: 'cover', display: 'block' }} />
+            </div>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+              <img src="/images/img2.jpg" alt="Reading an electricity meter"
+                style={{ width: '100%', height: '260px', objectFit: 'cover', display: 'block' }} />
+            </div>
+          </div>
         </div>
       </section>
 
