@@ -238,6 +238,53 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── HOW IT WORKS ─────────────────────────────── */}
+      <section style={{ padding: '5rem 2rem', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <h2 style={{ fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 800, letterSpacing: '-0.5px' }}>
+              How to Get Started
+            </h2>
+            <p style={{ color: '#64748b', marginTop: '.75rem', fontSize: '1.05rem', maxWidth: '520px', margin: '.75rem auto 0' }}>
+              You're up and running in under 3 minutes — no technical knowledge needed.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: '1.5rem', position: 'relative' }}>
+            {[
+              { step: 1, icon: '👤', title: 'Create Your Account', desc: 'Click "Get Started Free" and register with your name, email, and the district you live in. Takes less than a minute.' },
+              { step: 2, icon: '🏠', title: 'Set Up Your Appliances', desc: 'Tell us which appliances you own — fridge, AC, water heater, TV, washing machine and more — and how often you use them.' },
+              { step: 3, icon: '🔮', title: 'Predict Your Bill', desc: 'Hit Predict and our AI instantly calculates your expected bill for the month, including a full tariff breakdown.' },
+              { step: 4, icon: '📉', title: 'Reduce & Track', desc: 'See which appliances cost the most and get specific tips on how much you could save. Log your actual bill to track accuracy.' },
+            ].map((s, i) => (
+              <div key={i} style={{
+                background: '#fff', borderRadius: '16px', padding: '2rem',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.07)', border: '1px solid #e2e8f0',
+                position: 'relative',
+              }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#2563eb,#0f766e)',
+                  color: '#fff', fontWeight: 800, fontSize: '.95rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: '1rem',
+                }}>{s.step}</div>
+                <div style={{ fontSize: '2rem', marginBottom: '.75rem' }}>{s.icon}</div>
+                <h3 style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '.6rem', color: '#1e293b' }}>{s.title}</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.7, fontSize: '.9rem' }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
+            <Link to="/register" style={{
+              background: '#2563eb', color: '#fff', textDecoration: 'none',
+              padding: '.85rem 2.2rem', borderRadius: '10px', fontWeight: 700,
+              fontSize: '1rem', boxShadow: '0 4px 16px rgba(37,99,235,0.4)',
+              display: 'inline-block',
+            }}>Start Now — It's Free →</Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── VIDEOS ───────────────────────────────────── */}
       <section style={{ padding: '5rem 2rem', background: '#f0f4f8' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
