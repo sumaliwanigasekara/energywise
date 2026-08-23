@@ -20,7 +20,7 @@ const WHY = [
   { icon: '🌿', title: 'Environmental Impact', desc: 'Reducing household consumption directly lowers demand on the national grid, cutting carbon emissions and supporting a greener Sri Lanka.' },
 ]
 
-// Replace these YouTube video IDs with actual energy-saving videos of your choice
+
 const VIDEOS = [
   { id: 'mnZ_uG57xYI', title: 'How to Reduce Your Electricity Bill at Home' },
   { id: 'E-etG2PcUHA', title: 'Understanding Your Electricity Tariff' },
