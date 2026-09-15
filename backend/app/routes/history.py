@@ -79,11 +79,17 @@ def autofill():
     if not last:
         return jsonify({"prev_bill_1": None, "prev_bill_2": None, "prev_bill_3": None, "source": []}), 200
 
-    bill_1 = last.actual_units if last.actual_units else last.predicted_units
-    bill_2 = last.prev_bill_1
-    bill_3 = last.prev_bill_2
-
-    src_1 = "actual" if last.actual_units else "predicted"
+    if last.actual_units:
+        bill_1 = last.actual_units
+        bill_2 = last.prev_bill_1
+        bill_3 = last.prev_bill_2
+        src_1 = "actual"
+    else:
+        # Use the manually entered values from last time — never feed predicted back as history
+        bill_1 = last.prev_bill_1
+        bill_2 = last.prev_bill_2
+        bill_3 = last.prev_bill_3
+        src_1 = "from your entry"
 
     return jsonify({
         "prev_bill_1": round(bill_1, 1) if bill_1 else None,
